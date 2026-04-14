@@ -1,6 +1,8 @@
 import base64
-import requests
+from pathlib import Path
 from datetime import datetime, timezone
+
+import requests
 from fastapi import FastAPI
 
 app = FastAPI(title="orchestrator")
@@ -15,7 +17,8 @@ def health():
 
 @app.get("/test-emotion")
 def test_emotion():
-    fake_image = base64.b64encode(b"fake-image-bytes").decode("utf-8")
+    img_path = Path("/data/test_inputs/face.jpg")
+    image_b64 = base64.b64encode(img_path.read_bytes()).decode("utf-8")
 
     payload = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -25,12 +28,12 @@ def test_emotion():
         "face_id": 0,
         "image": {
             "encoding": "base64_jpeg",
-            "data": fake_image,
+            "data": image_b64,
         },
         "meta": {"mode": "smoke_test"},
     }
 
-    r = requests.post(f"{EMOTION_HSE_URL}/predict", json=payload, timeout=10)
+    r = requests.post(f"{EMOTION_HSE_URL}/predict", json=payload, timeout=30)
     return {
         "upstream_status": r.status_code,
         "upstream_response": r.json(),
