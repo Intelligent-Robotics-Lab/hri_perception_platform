@@ -1,0 +1,20 @@
+tasks:
+  emotion_recognition:
+    active_backend: emotion_emotieff
+    backends:
+      emotion_hse:
+        url: http://emotion_hse:8001
+      emotion_emotieff:
+        url: http://emotion_emotieff:8002
+
+  speech_recognition:
+    active_backend: null
+    backends: {}
+
+  object_detection:
+    active_backend: null
+    backends: {}
+
+  gesture_recognition:
+    active_backend: null
+    backends: {}

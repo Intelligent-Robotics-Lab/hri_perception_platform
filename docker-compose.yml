@@ -8,8 +8,13 @@ services:
       - "8000:8000"
     depends_on:
       - emotion_hse
+      - emotion_emotieff
     volumes:
       - ./data:/data
+    environment:
+      ACTIVE_EMOTION_MODEL: emotion_hse
+      EMOTION_HSE_URL: http://emotion_hse:8001
+      EMOTION_EMOTIEFF_URL: http://emotion_emotieff:8002
 
   emotion_hse:
     build:
@@ -18,3 +23,11 @@ services:
     container_name: emotion_hse
     ports:
       - "8001:8001"
+
+  emotion_emotieff:
+    build:
+      context: .
+      dockerfile: services/emotion_emotieff/Dockerfile
+    container_name: emotion_emotieff
+    ports:
+      - "8002:8002"

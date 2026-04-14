@@ -1,7 +1,7 @@
 fastapi
 uvicorn[standard]
-requests
 pydantic
-opencv-python-headless
+emotiefflib
 numpy
-pyyaml
+pillow
+opencv-python-headless

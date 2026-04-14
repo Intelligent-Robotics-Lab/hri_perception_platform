@@ -10,7 +10,8 @@ from app.face_detector import FaceDetector
 
 app = FastAPI(title="orchestrator")
 
-EMOTION_HSE_URL = "http://emotion_hse:8001"
+from app.routers.emotion_router import get_active_emotion_model, get_active_emotion_url
+
 face_detector = FaceDetector()
 
 
@@ -53,8 +54,12 @@ def test_emotion():
         "meta": {"mode": "smoke_test", "bbox_xyxy": str(bbox_xyxy)},
     }
 
-    r = requests.post(f"{EMOTION_HSE_URL}/predict", json=payload, timeout=30)
+    emotion_url = get_active_emotion_url()
+    active_model = get_active_emotion_model()
+
+    r = requests.post(f"{emotion_url}/predict", json=payload, timeout=30)
     return {
+        "active_model": active_model,
         "bbox_xyxy": bbox_xyxy,
         "upstream_status": r.status_code,
         "upstream_response": r.json(),
