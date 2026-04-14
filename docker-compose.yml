@@ -1,0 +1,20 @@
+services:
+  orchestrator:
+    build:
+      context: .
+      dockerfile: orchestrator/Dockerfile
+    container_name: orchestrator
+    ports:
+      - "8000:8000"
+    depends_on:
+      - emotion_hse
+    volumes:
+      - ./data:/data
+
+  emotion_hse:
+    build:
+      context: .
+      dockerfile: services/emotion_hse/Dockerfile
+    container_name: emotion_hse
+    ports:
+      - "8001:8001"
