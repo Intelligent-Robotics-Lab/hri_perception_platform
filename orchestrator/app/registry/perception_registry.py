@@ -8,13 +8,22 @@ CONFIG_PATH = Path("/app/app/config/perception_config.yaml")
 class PerceptionRegistry:
     def __init__(self, config_path=CONFIG_PATH):
         self.config_path = Path(config_path)
-        self._config = self._load_config()
+        self._config = None
+        self._mtime = None
+        self._reload_if_needed()
 
-    def _load_config(self):
-        with self.config_path.open("r") as f:
-            return yaml.safe_load(f)
+    def _reload_if_needed(self):
+        if not self.config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {self.config_path}")
+
+        mtime = self.config_path.stat().st_mtime
+        if self._config is None or self._mtime != mtime:
+            with self.config_path.open("r") as f:
+                self._config = yaml.safe_load(f)
+            self._mtime = mtime
 
     def get_task_config(self, task_name: str):
+        self._reload_if_needed()
         tasks = self._config.get("tasks", {})
         if task_name not in tasks:
             raise ValueError(f"Unknown task: {task_name}")

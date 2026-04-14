@@ -11,6 +11,7 @@ services:
       - emotion_emotieff
     volumes:
       - ./data:/data
+      - ./orchestrator/app/config:/app/app/config:ro
     environment:
       ACTIVE_EMOTION_MODEL: emotion_hse
       EMOTION_HSE_URL: http://emotion_hse:8001
