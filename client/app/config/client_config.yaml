@@ -1,0 +1,11 @@
+server:
+  ingest_frame_url: "http://YOUR_SERVER_IP:8000/ingest/frame"
+  emotion_state_url: "http://YOUR_SERVER_IP:8000/state/emotion"
+
+camera:
+  camera_index: 0
+  target_fps: 8
+  jpeg_quality: 70
+
+runtime:
+  print_server_response: true

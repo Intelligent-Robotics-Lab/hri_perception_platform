@@ -4,20 +4,83 @@ from datetime import datetime, timezone
 
 import cv2
 import requests
-from fastapi import FastAPI
+from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from app.face_detector import FaceDetector
+from app.ingest.live_ingest import FrameStore
+from app.routers.emotion_router import get_active_emotion_model, get_active_emotion_url
+from app.state.perception_state import PerceptionState
+from app.workers.emotion_worker import EmotionWorker
 
 app = FastAPI(title="orchestrator")
 
-from app.routers.emotion_router import get_active_emotion_model, get_active_emotion_url
-
 face_detector = FaceDetector()
+
+frame_store = FrameStore()
+perception_state = PerceptionState()
+emotion_worker = None
+
+
+@app.on_event("startup")
+def startup_event():
+    global emotion_worker
+    emotion_worker = EmotionWorker(
+        frame_store=frame_store,
+        perception_state=perception_state,
+        interval_sec=0.05,
+    )
+    emotion_worker.start()
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    global emotion_worker
+    if emotion_worker is not None:
+        emotion_worker.stop()
 
 
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "orchestrator"}
+
+
+@app.post("/ingest/frame")
+async def ingest_frame(file: UploadFile = File(...)):
+    """
+    Client sends the latest camera frame here as an image file.
+    We decode it and keep only the newest frame for low-latency processing.
+    """
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty uploaded file")
+
+    try:
+        packet = frame_store.update_from_bytes(content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {
+        "status": "ok",
+        "frame_id": packet.frame_id,
+        "timestamp_utc": packet.timestamp_utc,
+        "active_model": get_active_emotion_model(),
+    }
+
+
+@app.get("/state/emotion")
+def get_emotion_state():
+    emotion_state = perception_state.get_emotion()
+    if emotion_state is None:
+        return {
+            "status": "ok",
+            "message": "No emotion state yet",
+            "emotion_state": None,
+        }
+
+    return {
+        "status": "ok",
+        "emotion_state": emotion_state,
+    }
 
 
 @app.get("/test-emotion")
