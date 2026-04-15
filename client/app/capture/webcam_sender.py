@@ -25,6 +25,7 @@ class WebcamSender:
             raise RuntimeError(f"Could not open webcam index {camera_index}")
 
         self.frame_counter = 0
+        self.last_send_end_ts = None
 
     def run(self, print_server_response: bool = False):
         target_delay = 1.0 / self.target_fps
@@ -71,13 +72,20 @@ class WebcamSender:
                     print(f"Request failed: {e}")
                 post_end = time.perf_counter()
 
-                loop_end = time.perf_counter()
+                loop_processing_end = time.perf_counter()
 
                 capture_to_encode_ms = (encode_end - encode_start) * 1000
                 post_round_trip_ms = (post_end - post_start) * 1000
-                loop_total_ms = (loop_end - loop_start) * 1000
-                achieved_fps = 1000.0 / loop_total_ms if loop_total_ms > 0 else 0.0
+                loop_processing_ms = (loop_processing_end - loop_start) * 1000
 
+                send_interval_ms = None
+                effective_send_fps = None
+                if self.last_send_end_ts is not None:
+                    send_interval_ms = (post_end - self.last_send_end_ts) * 1000
+                    if send_interval_ms > 0:
+                        effective_send_fps = 1000.0 / send_interval_ms
+
+                self.last_send_end_ts = post_end
                 self.frame_counter += 1
 
                 if print_server_response and response_json is not None:
@@ -89,11 +97,13 @@ class WebcamSender:
                         "response_status": response_status,
                         "capture_to_encode_ms": round(capture_to_encode_ms, 2),
                         "post_round_trip_ms": round(post_round_trip_ms, 2),
-                        "loop_total_ms": round(loop_total_ms, 2),
-                        "achieved_fps": round(achieved_fps, 2),
+                        "loop_processing_ms": round(loop_processing_ms, 2),
+                        "send_interval_ms": round(send_interval_ms, 2) if send_interval_ms is not None else None,
+                        "effective_send_fps": round(effective_send_fps, 2) if effective_send_fps is not None else None,
                     })
 
-                sleep_time = max(0, target_delay - (time.perf_counter() - loop_start))
+                elapsed = time.perf_counter() - loop_start
+                sleep_time = max(0, target_delay - elapsed)
                 time.sleep(sleep_time)
 
         finally:
