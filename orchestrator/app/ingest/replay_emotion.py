@@ -24,11 +24,14 @@ def encode_face_crop(face_crop_bgr):
         return None
     return base64.b64encode(encoded.tobytes()).decode("utf-8")
 
-emotion_url = get_active_emotion_url()
-active_model = get_active_emotion_model()
+
 
 def main():
+    emotion_url = get_active_emotion_url()
+    active_model = get_active_emotion_model()
+    
     detector = FaceDetector()
+
 
     cap = cv2.VideoCapture(str(VIDEO_PATH))
     if not cap.isOpened():

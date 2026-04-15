@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import cv2
 import requests
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from app.face_detector import FaceDetector
 from app.ingest.live_ingest import FrameStore
@@ -45,24 +45,27 @@ def health():
 
 
 @app.post("/ingest/frame")
-async def ingest_frame(file: UploadFile = File(...)):
-    """
-    Client sends the latest camera frame here as an image file.
-    We decode it and keep only the newest frame for low-latency processing.
-    """
+async def ingest_frame(
+    file: UploadFile = File(...),
+    client_capture_timestamp: str | None = Form(default=None),
+):
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty uploaded file")
 
     try:
-        packet = frame_store.update_from_bytes(content)
+        packet = frame_store.update_from_bytes(
+            content,
+            client_capture_timestamp=client_capture_timestamp,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     return {
         "status": "ok",
         "frame_id": packet.frame_id,
-        "timestamp_utc": packet.timestamp_utc,
+        "client_capture_timestamp": packet.client_capture_timestamp,
+        "server_ingest_timestamp": packet.server_ingest_timestamp,
         "active_model": get_active_emotion_model(),
     }
 
@@ -80,6 +83,22 @@ def get_emotion_state():
     return {
         "status": "ok",
         "emotion_state": emotion_state,
+    }
+
+
+@app.get("/metrics/live/emotion")
+def get_emotion_metrics():
+    metrics = perception_state.get_emotion_metrics()
+    if metrics is None:
+        return {
+            "status": "ok",
+            "message": "No live emotion metrics yet",
+            "metrics": None,
+        }
+
+    return {
+        "status": "ok",
+        "metrics": metrics,
     }
 
 

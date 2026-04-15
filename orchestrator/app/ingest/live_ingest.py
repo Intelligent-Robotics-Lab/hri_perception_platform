@@ -10,7 +10,8 @@ import numpy as np
 @dataclass
 class FramePacket:
     frame_id: int
-    timestamp_utc: str
+    client_capture_timestamp: Optional[str]
+    server_ingest_timestamp: str
     frame_bgr: object
 
 
@@ -20,7 +21,7 @@ class FrameStore:
         self._latest: Optional[FramePacket] = None
         self._next_frame_id = 0
 
-    def update_from_bytes(self, file_bytes: bytes) -> FramePacket:
+    def update_from_bytes(self, file_bytes: bytes, client_capture_timestamp: Optional[str] = None) -> FramePacket:
         np_buf = np.frombuffer(file_bytes, dtype=np.uint8)
         image_bgr = cv2.imdecode(np_buf, cv2.IMREAD_COLOR)
         if image_bgr is None:
@@ -29,7 +30,8 @@ class FrameStore:
         with self._lock:
             packet = FramePacket(
                 frame_id=self._next_frame_id,
-                timestamp_utc=datetime.now(timezone.utc).isoformat(),
+                client_capture_timestamp=client_capture_timestamp,
+                server_ingest_timestamp=datetime.now(timezone.utc).isoformat(),
                 frame_bgr=image_bgr,
             )
             self._latest = packet

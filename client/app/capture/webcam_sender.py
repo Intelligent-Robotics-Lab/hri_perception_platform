@@ -1,4 +1,6 @@
 import time
+from datetime import datetime, timezone
+
 import cv2
 import requests
 
@@ -25,6 +27,8 @@ class WebcamSender:
                 if not ret:
                     continue
 
+                client_capture_timestamp = datetime.now(timezone.utc).isoformat()
+
                 ok, encoded = cv2.imencode(
                     ".jpg",
                     frame,
@@ -37,8 +41,12 @@ class WebcamSender:
                     "file": ("frame.jpg", encoded.tobytes(), "image/jpeg")
                 }
 
+                data = {
+                    "client_capture_timestamp": client_capture_timestamp
+                }
+
                 try:
-                    r = requests.post(self.ingest_url, files=files, timeout=1.5)
+                    r = requests.post(self.ingest_url, files=files, data=data, timeout=1.5)
                     if print_server_response:
                         if r.ok:
                             print(r.json())
