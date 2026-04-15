@@ -8,4 +8,5 @@ camera:
   jpeg_quality: 70
 
 runtime:
-  print_server_response: true
+  print_server_response: false
+  print_metrics_every_n_frames: 20

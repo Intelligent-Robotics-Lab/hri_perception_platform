@@ -18,6 +18,7 @@ def main():
         camera_index=cfg["camera"]["camera_index"],
         target_fps=cfg["camera"]["target_fps"],
         jpeg_quality=cfg["camera"]["jpeg_quality"],
+        print_metrics_every_n_frames=cfg["runtime"]["print_metrics_every_n_frames"],
     )
 
     sender.run(
