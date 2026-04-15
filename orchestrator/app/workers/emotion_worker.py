@@ -8,7 +8,7 @@ import cv2
 import requests
 
 from app.face_detector import FaceDetector
-from app.ingest.live_ingest import FrameStore
+from app.ingest.frame_store import FrameStore
 from app.routers.emotion_router import get_active_emotion_model, get_active_emotion_url
 from app.state.perception_state import PerceptionState
 

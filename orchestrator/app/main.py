@@ -7,7 +7,8 @@ import requests
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from app.face_detector import FaceDetector
-from app.ingest.live_ingest import FrameStore
+from app.ingest.frame_store import FrameStore
+from app.ingest.transport_adapters.bootstrap_http_ingest import BootstrapHttpFrameIngestAdapter
 from app.routers.emotion_router import get_active_emotion_model, get_active_emotion_url
 from app.state.perception_state import PerceptionState
 from app.workers.emotion_worker import EmotionWorker
@@ -17,6 +18,7 @@ app = FastAPI(title="orchestrator")
 face_detector = FaceDetector()
 
 frame_store = FrameStore()
+frame_ingest_adapter = BootstrapHttpFrameIngestAdapter(frame_store)
 perception_state = PerceptionState()
 emotion_worker = None
 
@@ -54,8 +56,8 @@ async def ingest_frame(
         raise HTTPException(status_code=400, detail="Empty uploaded file")
 
     try:
-        packet = frame_store.update_from_bytes(
-            content,
+        packet = frame_ingest_adapter.ingest(
+            file_bytes=content,
             client_capture_timestamp=client_capture_timestamp,
         )
     except ValueError as e:
