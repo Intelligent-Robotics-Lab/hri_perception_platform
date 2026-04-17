@@ -95,6 +95,8 @@ class WebcamSender:
                     print({
                         "frame_counter": self.frame_counter,
                         "response_status": response_status,
+                        "server_frame_id": response_json.get("frame_id") if response_json else None,
+                        "server_ingest_timestamp": response_json.get("server_ingest_timestamp") if response_json else None,
                         "capture_to_encode_ms": round(capture_to_encode_ms, 2),
                         "post_round_trip_ms": round(post_round_trip_ms, 2),
                         "loop_processing_ms": round(loop_processing_ms, 2),

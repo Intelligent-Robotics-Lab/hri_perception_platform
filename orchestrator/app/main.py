@@ -7,10 +7,12 @@ import requests
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from app.face_detector import FaceDetector
+from app.ingest.audio_store import AudioStore
 from app.ingest.frame_store import FrameStore
 from app.ingest.transport_adapters.bootstrap_http_ingest import BootstrapHttpFrameIngestAdapter
 from app.routers.emotion_router import get_active_emotion_model, get_active_emotion_url
 from app.state.perception_state import PerceptionState
+from app.workers.asr_worker import ASRWorker
 from app.workers.emotion_worker import EmotionWorker
 
 app = FastAPI(title="orchestrator")
@@ -18,14 +20,20 @@ app = FastAPI(title="orchestrator")
 face_detector = FaceDetector()
 
 frame_store = FrameStore()
+audio_store = AudioStore()
+
 frame_ingest_adapter = BootstrapHttpFrameIngestAdapter(frame_store)
+
 perception_state = PerceptionState()
+
 emotion_worker = None
+asr_worker = None
 
 
 @app.on_event("startup")
 def startup_event():
-    global emotion_worker
+    global emotion_worker, asr_worker
+
     emotion_worker = EmotionWorker(
         frame_store=frame_store,
         perception_state=perception_state,
@@ -33,12 +41,23 @@ def startup_event():
     )
     emotion_worker.start()
 
+    asr_worker = ASRWorker(
+        audio_store=audio_store,
+        perception_state=perception_state,
+        interval_sec=0.05,
+    )
+    asr_worker.start()
+
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global emotion_worker
+    global emotion_worker, asr_worker
+
     if emotion_worker is not None:
         emotion_worker.stop()
+
+    if asr_worker is not None:
+        asr_worker.stop()
 
 
 @app.get("/health")
@@ -72,6 +91,37 @@ async def ingest_frame(
     }
 
 
+@app.post("/ingest/audio")
+async def ingest_audio(
+    file: UploadFile = File(...),
+    client_capture_timestamp: str | None = Form(default=None),
+    source_id: str | None = Form(default="live_client"),
+    sample_rate_hz: int | None = Form(default=None),
+    channels: int | None = Form(default=None),
+    encoding: str | None = Form(default=None),
+):
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty uploaded audio")
+
+    packet = audio_store.update_from_bytes(
+        audio_bytes=content,
+        client_capture_timestamp=client_capture_timestamp,
+        source_id=source_id,
+        sample_rate_hz=sample_rate_hz,
+        channels=channels,
+        encoding=encoding,
+    )
+
+    return {
+        "status": "ok",
+        "chunk_id": packet.chunk_id,
+        "client_capture_timestamp": packet.client_capture_timestamp,
+        "server_ingest_timestamp": packet.server_ingest_timestamp,
+        "source_id": packet.source_id,
+    }
+
+
 @app.get("/state/emotion")
 def get_emotion_state():
     emotion_state = perception_state.get_emotion()
@@ -95,6 +145,38 @@ def get_emotion_metrics():
         return {
             "status": "ok",
             "message": "No live emotion metrics yet",
+            "metrics": None,
+        }
+
+    return {
+        "status": "ok",
+        "metrics": metrics,
+    }
+
+
+@app.get("/state/asr")
+def get_asr_state():
+    asr_state = perception_state.get_asr()
+    if asr_state is None:
+        return {
+            "status": "ok",
+            "message": "No ASR state yet",
+            "asr_state": None,
+        }
+
+    return {
+        "status": "ok",
+        "asr_state": asr_state,
+    }
+
+
+@app.get("/metrics/live/asr")
+def get_asr_metrics():
+    metrics = perception_state.get_asr_metrics()
+    if metrics is None:
+        return {
+            "status": "ok",
+            "message": "No live ASR metrics yet",
             "metrics": None,
         }
 

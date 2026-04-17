@@ -91,9 +91,11 @@ class EmotionWorker:
                         "frame_id": packet.frame_id,
                         "active_model": active_model,
                         "face_detected": False,
+                        "worker_queue_delay_ms": round((worker_start_ts - server_ingest_ts) * 1000, 2) if server_ingest_ts else None,
                         "backend_inference_latency_ms": None,
                         "server_pipeline_latency_ms": round((worker_finish_ts - server_ingest_ts) * 1000, 2) if server_ingest_ts else None,
-                        "end_to_end_latency_ms": round((worker_finish_ts - client_capture_ts) * 1000, 2) if client_capture_ts else None,
+                        "end_to_end_latency_ms": None,
+                        "end_to_end_latency_note": "not computed on server because client and server clocks are not guaranteed synchronized",
                     }
 
                     self.perception_state.update_emotion(result, metrics)
@@ -153,9 +155,11 @@ class EmotionWorker:
                     "frame_id": packet.frame_id,
                     "active_model": active_model,
                     "face_detected": True,
+                    "worker_queue_delay_ms": round((worker_start_ts - server_ingest_ts) * 1000, 2) if server_ingest_ts else None,
                     "backend_inference_latency_ms": backend_inference_latency_ms,
                     "server_pipeline_latency_ms": round((worker_finish_ts - server_ingest_ts) * 1000, 2) if server_ingest_ts else None,
-                    "end_to_end_latency_ms": round((worker_finish_ts - client_capture_ts) * 1000, 2) if client_capture_ts else None,
+                    "end_to_end_latency_ms": None,
+                    "end_to_end_latency_note": "not computed on server because client and server clocks are not guaranteed synchronized",
                 }
 
                 self.perception_state.update_emotion(result, metrics)
