@@ -8,8 +8,10 @@ tasks:
         url: http://emotion_emotieff:8002
 
   speech_recognition:
-    active_backend: null
-    backends: {}
+    active_backend: asr_riva
+    backends:
+      asr_riva:
+        url: http://asr_riva:8003
 
   object_detection:
     active_backend: null

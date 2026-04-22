@@ -9,6 +9,7 @@ services:
     depends_on:
       - emotion_hse
       - emotion_emotieff
+      - asr_riva
     volumes:
       - ./data:/data
       - ./orchestrator/app/config:/app/app/config:ro
@@ -32,3 +33,11 @@ services:
     container_name: emotion_emotieff
     ports:
       - "8002:8002"
+
+  asr_riva:
+    build:
+      context: .
+      dockerfile: services/asr_riva/Dockerfile
+    container_name: asr_riva
+    ports:
+      - "8003:8003"

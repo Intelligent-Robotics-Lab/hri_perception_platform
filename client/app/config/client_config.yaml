@@ -1,12 +1,21 @@
 server:
   ingest_frame_url: "http://YOUR_SERVER_IP:8000/ingest/frame"
   emotion_state_url: "http://YOUR_SERVER_IP:8000/state/emotion"
+  ingest_audio_url: "http://YOUR_SERVER_IP:8000/ingest/audio"
+  asr_state_url: "http://YOUR_SERVER_IP:8000/state/asr"
 
 camera:
   camera_index: 0
   target_fps: 8
   jpeg_quality: 70
 
+audio:
+  sample_rate_hz: 16000
+  channels: 1
+  chunk_duration_sec: 1.0
+  subtype: "int16"
+
 runtime:
   print_server_response: false
   print_metrics_every_n_frames: 20
+  print_audio_metrics_every_n_chunks: 5
