@@ -1,3 +1,9 @@
+runtime:
+  enable_gst_video_bridge: false
+  signaling_host: "141.210.144.85"
+  signaling_port: 8443
+  signaling_use_tls: false
+
 tasks:
   emotion_recognition:
     active_backend: emotion_emotieff

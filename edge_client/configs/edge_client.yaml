@@ -1,0 +1,13 @@
+video:
+  device: default
+  width: 640
+  height: 480
+  fps: 15
+  drop_old_frames: true
+
+webrtc:
+  signaling_url: "ws://YOUR_SIGNALING_HOST:8443"
+  room_id: "hri-video-dev"
+
+runtime:
+  debug: true

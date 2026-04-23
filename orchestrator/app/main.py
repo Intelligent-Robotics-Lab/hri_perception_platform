@@ -10,12 +10,15 @@ from app.face_detector import FaceDetector
 from app.ingest.audio_store import AudioStore
 from app.ingest.frame_store import FrameStore
 from app.ingest.transport_adapters.bootstrap_http_ingest import BootstrapHttpFrameIngestAdapter
+from app.registry.perception_registry import PerceptionRegistry
 from app.routers.emotion_router import get_active_emotion_model, get_active_emotion_url
 from app.state.perception_state import PerceptionState
 from app.workers.asr_worker import ASRWorker
 from app.workers.emotion_worker import EmotionWorker
 
 app = FastAPI(title="orchestrator")
+
+registry = PerceptionRegistry()
 
 face_detector = FaceDetector()
 
@@ -28,11 +31,12 @@ perception_state = PerceptionState()
 
 emotion_worker = None
 asr_worker = None
+gst_video_bridge = None
 
 
 @app.on_event("startup")
 def startup_event():
-    global emotion_worker, asr_worker
+    global emotion_worker, asr_worker, gst_video_bridge
 
     emotion_worker = EmotionWorker(
         frame_store=frame_store,
@@ -48,16 +52,34 @@ def startup_event():
     )
     asr_worker.start()
 
+    registry._reload_if_needed()
+    runtime_cfg = registry._config.get("runtime", {}) if registry._config else {}
+    enable_gst_video_bridge = runtime_cfg.get("enable_gst_video_bridge", False)
+
+    if enable_gst_video_bridge:
+        from app.ingest.gst_video_bridge import GstVideoBridge
+
+        gst_video_bridge = GstVideoBridge(
+            frame_store=frame_store,
+            signaling_host=runtime_cfg.get("signaling_host", "141.210.144.85"),
+            signaling_port=runtime_cfg.get("signaling_port", 8443),
+            use_tls=runtime_cfg.get("signaling_use_tls", False),
+        )
+        gst_video_bridge.start()
+
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global emotion_worker, asr_worker
+    global emotion_worker, asr_worker, gst_video_bridge
 
     if emotion_worker is not None:
         emotion_worker.stop()
 
     if asr_worker is not None:
         asr_worker.stop()
+
+    if gst_video_bridge is not None:
+        gst_video_bridge.stop()
 
 
 @app.get("/health")

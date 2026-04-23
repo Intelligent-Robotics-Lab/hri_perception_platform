@@ -41,3 +41,18 @@ services:
     container_name: asr_riva
     ports:
       - "8003:8003"
+
+  media_gateway:
+    build:
+      context: .
+      dockerfile: services/media_gateway/Dockerfile
+    container_name: media_gateway
+    depends_on:
+      - orchestrator
+    ports:
+      - "8010:8010"
+    environment:
+      MEDIA_GATEWAY_SIGNALING_HOST: "141.210.144.85"
+      MEDIA_GATEWAY_SIGNALING_PORT: "8443"
+      MEDIA_GATEWAY_SIGNALING_USE_TLS: "false"
+      MEDIA_GATEWAY_ORCHESTRATOR_INGEST_URL: "http://orchestrator:8000/ingest/frame"

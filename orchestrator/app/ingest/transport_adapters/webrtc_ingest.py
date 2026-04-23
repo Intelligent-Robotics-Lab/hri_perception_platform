@@ -5,17 +5,7 @@ from app.ingest.frame_store import FrameStore
 
 
 class WebRTCIngestAdapter:
-    """
-    Production transport adapter target.
-
-    This adapter will eventually receive live audio/video from a WebRTC session
-    and populate the platform's latest media stores.
-
-    The perception platform downstream of this adapter should not need to know
-    whether media arrived from bootstrap HTTP, replay, or WebRTC.
-    """
-
-    def __init__(self, frame_store: FrameStore, audio_store: AudioStore):
+    def __init__(self, frame_store: FrameStore, audio_store: Optional[AudioStore] = None):
         self.frame_store = frame_store
         self.audio_store = audio_store
 
@@ -39,6 +29,9 @@ class WebRTCIngestAdapter:
         channels: Optional[int] = None,
         encoding: Optional[str] = None,
     ):
+        if self.audio_store is None:
+            raise RuntimeError("AudioStore is not configured for this WebRTCIngestAdapter")
+
         return self.audio_store.update_from_bytes(
             audio_bytes=audio_bytes,
             client_capture_timestamp=client_capture_timestamp,

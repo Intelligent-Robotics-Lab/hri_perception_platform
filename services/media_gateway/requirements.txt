@@ -1,8 +1,5 @@
 fastapi
 uvicorn[standard]
 requests
-pydantic
 opencv-python-headless
 numpy
-pyyaml
-python-multipart
