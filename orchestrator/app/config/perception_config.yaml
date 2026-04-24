@@ -1,5 +1,5 @@
 runtime:
-  enable_gst_video_bridge: false
+  enable_legacy_gst_video_bridge: false
   signaling_host: "141.210.144.85"
   signaling_port: 8443
   signaling_use_tls: false

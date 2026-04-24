@@ -31,12 +31,17 @@ perception_state = PerceptionState()
 
 emotion_worker = None
 asr_worker = None
-gst_video_bridge = None
 
 
 @app.on_event("startup")
 def startup_event():
-    global emotion_worker, asr_worker, gst_video_bridge
+    global emotion_worker, asr_worker
+
+    # Production policy:
+    # - orchestrator is transport-agnostic
+    # - live media enters only through HTTP ingest from services/media_gateway
+    # - legacy direct GStreamer/WebRTC receive paths are not started here
+    registry._reload_if_needed()
 
     emotion_worker = EmotionWorker(
         frame_store=frame_store,
@@ -52,25 +57,10 @@ def startup_event():
     )
     asr_worker.start()
 
-    registry._reload_if_needed()
-    runtime_cfg = registry._config.get("runtime", {}) if registry._config else {}
-    enable_gst_video_bridge = runtime_cfg.get("enable_gst_video_bridge", False)
-
-    if enable_gst_video_bridge:
-        from app.ingest.gst_video_bridge import GstVideoBridge
-
-        gst_video_bridge = GstVideoBridge(
-            frame_store=frame_store,
-            signaling_host=runtime_cfg.get("signaling_host", "141.210.144.85"),
-            signaling_port=runtime_cfg.get("signaling_port", 8443),
-            use_tls=runtime_cfg.get("signaling_use_tls", False),
-        )
-        gst_video_bridge.start()
-
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global emotion_worker, asr_worker, gst_video_bridge
+    global emotion_worker, asr_worker
 
     if emotion_worker is not None:
         emotion_worker.stop()
@@ -78,13 +68,14 @@ def shutdown_event():
     if asr_worker is not None:
         asr_worker.stop()
 
-    if gst_video_bridge is not None:
-        gst_video_bridge.stop()
-
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "orchestrator"}
+    return {
+        "status": "ok",
+        "service": "orchestrator",
+        "transport_policy": "http_ingest_only",
+    }
 
 
 @app.post("/ingest/frame")
