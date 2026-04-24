@@ -11,6 +11,7 @@ from app.face_detector import FaceDetector
 from app.ingest.frame_store import FrameStore
 from app.routers.emotion_router import get_active_emotion_model, get_active_emotion_url
 from app.state.perception_state import PerceptionState
+from app.debug.frame_debug import save_annotated_frame, save_face_crop, save_input_frame
 
 
 def iso_to_ts(iso_str: Optional[str]) -> Optional[float]:
@@ -69,12 +70,17 @@ class EmotionWorker:
                 frame = packet.frame_bgr
                 active_model = get_active_emotion_model()
 
+                save_input_frame(frame)
+                print(f"[emotion_worker] frame shape={frame.shape} dtype={frame.dtype}", flush=True)
+
                 detected = self.detector.detect_largest_face(frame)
 
                 worker_finish_timestamp = datetime.now(timezone.utc).isoformat()
                 worker_finish_ts = iso_to_ts(worker_finish_timestamp)
 
                 if detected is None:
+                    save_annotated_frame(frame, bbox_xyxy=None, label="no_face_detected")
+
                     result = {
                         "frame_id": packet.frame_id,
                         "client_capture_timestamp": packet.client_capture_timestamp,
@@ -104,6 +110,10 @@ class EmotionWorker:
 
                 bbox_xyxy = detected["bbox_xyxy"]
                 face_crop_bgr = detected["face_crop_bgr"]
+
+                save_face_crop(frame, bbox_xyxy)
+                save_annotated_frame(frame, bbox_xyxy=bbox_xyxy, label="face_detected")
+
                 image_b64 = self._encode_crop_to_b64(face_crop_bgr)
 
                 if image_b64 is None:
