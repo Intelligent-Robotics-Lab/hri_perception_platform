@@ -15,8 +15,11 @@ from app.routers.emotion_router import get_active_emotion_model, get_active_emot
 from app.state.perception_state import PerceptionState
 from app.workers.asr_worker import ASRWorker
 from app.workers.emotion_worker import EmotionWorker
+from app.routers.debug_router import router as debug_router
 
 app = FastAPI(title="orchestrator")
+
+app.include_router(debug_router)
 
 registry = PerceptionRegistry()
 

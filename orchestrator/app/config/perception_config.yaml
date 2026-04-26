@@ -6,7 +6,7 @@ runtime:
 
 tasks:
   emotion_recognition:
-    active_backend: emotion_emotieff
+    active_backend: emotion_hse
     backends:
       emotion_hse:
         url: http://emotion_hse:8001
