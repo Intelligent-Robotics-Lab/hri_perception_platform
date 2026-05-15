@@ -66,8 +66,7 @@
       align-items: start;
     }
     .image-card h2,
-    .info-card h2,
-    .asr-card h2 {
+    .info-card h2 {
       margin: 0 0 10px 0;
       font-size: 18px;
     }
@@ -110,16 +109,6 @@
       font-weight: 600;
       word-break: break-word;
     }
-    .asr-transcript {
-      min-height: 88px;
-      padding: 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      font-size: 20px;
-      line-height: 1.4;
-      white-space: pre-wrap;
-    }
     .ok { color: var(--ok); }
     .bad { color: var(--bad); }
     .footer {
@@ -137,7 +126,7 @@
 <body>
   <div class="wrap">
     <h1>HRI Perception Live Debug</h1>
-    <div class="sub">Operational preview for live video, emotion state, gateway health, and ASR output.</div>
+    <div class="sub">Operational preview for live video, emotion state, and gateway health.</div>
 
     <div class="status-strip">
       <div class="card">
@@ -153,8 +142,8 @@
         <div class="metric-value" id="serverLatency">Loading...</div>
       </div>
       <div class="card">
-        <div class="metric-label">Forwarded frames / audio chunks</div>
-        <div class="metric-value" id="mediaCounts">Loading...</div>
+        <div class="metric-label">Forwarded frames</div>
+        <div class="metric-value" id="forwardedFrames">Loading...</div>
       </div>
     </div>
 
@@ -180,26 +169,13 @@
         <div class="kv"><div class="k">Face detected</div><div class="v" id="faceDetected">-</div></div>
         <div class="kv"><div class="k">Confidence</div><div class="v" id="emotionConfidence">-</div></div>
         <div class="kv"><div class="k">Frame ID</div><div class="v" id="frameId">-</div></div>
-        <div class="kv"><div class="k">Active emotion model</div><div class="v" id="activeModel">-</div></div>
+        <div class="kv"><div class="k">Active model</div><div class="v" id="activeModel">-</div></div>
         <div class="kv"><div class="k">Backend inference latency</div><div class="v" id="backendLatency">-</div></div>
         <div class="kv"><div class="k">Worker queue delay</div><div class="v" id="workerQueueDelay">-</div></div>
-        <div class="kv"><div class="k">Last video sample timestamp</div><div class="v" id="lastSampleTs">-</div></div>
+        <div class="kv"><div class="k">Last sample timestamp</div><div class="v" id="lastSampleTs">-</div></div>
         <div class="kv"><div class="k">Last emotion timestamp</div><div class="v" id="emotionTs">-</div></div>
       </div>
-    </div>
-
-    <div class="card asr-card" style="margin-top: 16px;">
-      <h2>Utterance</h2>
-      <div class="asr-transcript" id="asrTranscript">Waiting for ASR...</div>
-      <div class="details" style="margin-top: 12px;">
-        <div class="kv"><div class="k">ASR model</div><div class="v" id="asrModel">-</div></div>
-        <div class="kv"><div class="k">ASR chunk ID</div><div class="v" id="asrChunkId">-</div></div>
-        <div class="kv"><div class="k">ASR latency</div><div class="v" id="asrLatency">-</div></div>
-        <div class="kv"><div class="k">Audio last sample timestamp</div><div class="v" id="audioLastSampleTs">-</div></div>
-        <div class="kv"><div class="k">Audio source</div><div class="v" id="asrSource">-</div></div>
-        <div class="kv"><div class="k">ASR warnings</div><div class="v" id="asrWarnings">-</div></div>
-      </div>
-      <div class="footer">If the current ASR backend is still scaffold mode, this area will show no transcript yet and will surface backend warnings instead.</div>
+      <div class="footer">Refresh interval: 500 ms. This page is for operational visibility, not formal benchmark judgment.</div>
     </div>
   </div>
 
@@ -239,25 +215,18 @@
       annotatedFrame.src = `/debug/image/annotated?t=${cacheBust}`;
 
       try {
-        const [gateway, emotionStateWrap, emotionMetricsWrap, asrStateWrap, asrMetricsWrap] = await Promise.all([
+        const [gateway, emotionStateWrap, emotionMetricsWrap] = await Promise.all([
           fetchJson("/debug/gateway-status"),
           fetchJson("/state/emotion"),
           fetchJson("/metrics/live/emotion"),
-          fetchJson("/state/asr"),
-          fetchJson("/metrics/live/asr"),
         ]);
 
         const emotionState = emotionStateWrap.emotion_state || null;
         const emotionMetrics = emotionMetricsWrap.metrics || null;
-        const asrState = asrStateWrap.asr_state || null;
-        const asrMetrics = asrMetricsWrap.metrics || null;
 
         setGatewayStatus(Boolean(gateway.session && gateway.session.connected));
-        const frameCount = gateway.video?.forwarded_frame_count ?? 0;
-        const audioCount = gateway.audio?.forwarded_audio_chunk_count ?? 0;
-        text("mediaCounts", `${frameCount} / ${audioCount}`);
+        text("forwardedFrames", gateway.video?.forwarded_frame_count ?? gateway.video?.received_sample_count ?? "-");
         text("lastSampleTs", gateway.video?.last_sample_timestamp_utc ?? "-");
-        text("audioLastSampleTs", gateway.audio?.last_sample_timestamp_utc ?? "-");
 
         if (emotionState) {
           const prediction = emotionState.prediction || null;
@@ -279,32 +248,9 @@
         text("serverLatency", fmtMs(emotionMetrics?.server_pipeline_latency_ms));
         text("backendLatency", fmtMs(emotionMetrics?.backend_inference_latency_ms));
         text("workerQueueDelay", fmtMs(emotionMetrics?.worker_queue_delay_ms));
-
-        if (asrState) {
-          const backend = asrState.backend_result || null;
-          const transcript = backend?.transcript;
-          document.getElementById("asrTranscript").textContent =
-            transcript && transcript.trim().length > 0
-              ? transcript
-              : "No transcript yet";
-          text("asrModel", asrState.active_model ?? "-");
-          text("asrChunkId", asrState.chunk_id ?? "-");
-          text("asrLatency", fmtMs(asrMetrics?.backend_inference_latency_ms));
-          text("asrSource", asrState.source_id ?? "-");
-          const warnings = backend?.warnings;
-          text("asrWarnings", Array.isArray(warnings) && warnings.length ? warnings.join(" | ") : "-");
-        } else {
-          document.getElementById("asrTranscript").textContent = "Waiting for ASR...";
-          text("asrModel", "-");
-          text("asrChunkId", "-");
-          text("asrLatency", "-");
-          text("asrSource", "-");
-          text("asrWarnings", "-");
-        }
       } catch (err) {
         setGatewayStatus(false);
         text("emotionLabel", "Fetch error");
-        document.getElementById("asrTranscript").textContent = "Fetch error";
         console.error(err);
       }
     }

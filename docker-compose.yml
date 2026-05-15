@@ -10,6 +10,7 @@ services:
       - emotion_hse
       - emotion_emotieff
       - asr_riva
+      - asr_whisper
     volumes:
       - ./data:/data
       - ./orchestrator/app/config:/app/app/config:ro
@@ -34,13 +35,30 @@ services:
     ports:
       - "8002:8002"
 
+  asr_whisper:
+    build:
+      context: .
+      dockerfile: services/asr_whisper/Dockerfile
+    container_name: asr_whisper
+    ports:
+      - "8003:8003"
+    environment:
+      ASR_MODEL_SIZE: "tiny.en"
+      ASR_DEVICE: "cpu"
+      ASR_COMPUTE_TYPE: "int8"
+      ASR_LANGUAGE: "en"
+
   asr_riva:
     build:
       context: .
       dockerfile: services/asr_riva/Dockerfile
     container_name: asr_riva
     ports:
-      - "8003:8003"
+      - "8004:8004"
+    environment:
+      ASR_LANGUAGE: "en"
+      RIVA_UPSTREAM_TRANSCRIBE_URL: "http://riva_runtime:9000/transcribe"
+      RIVA_UPSTREAM_HEALTH_URL: "http://riva_runtime:9000/health"
 
   media_gateway:
     build:
@@ -63,9 +81,9 @@ services:
       # MEDIA_GATEWAY_VIDEO_STALL_TIMEOUT_SEC: "6.0"
       # MEDIA_GATEWAY_AUDIO_STALL_TIMEOUT_SEC: "8.0"
       # MEDIA_GATEWAY_RECONNECT_BACKOFF_SEC: "1.0"
-      MEDIA_GATEWAY_DIAGNOSTIC_VIDEO_ONLY: "true"
+      MEDIA_GATEWAY_DIAGNOSTIC_VIDEO_ONLY: "false"
       MEDIA_GATEWAY_ENABLE_VIDEO_FORWARDING: "true"
-      MEDIA_GATEWAY_ENABLE_AUDIO_FORWARDING: "false"
+      MEDIA_GATEWAY_ENABLE_AUDIO_FORWARDING: "true"
       MEDIA_GATEWAY_VIDEO_STALL_TIMEOUT_SEC: "20.0"
       MEDIA_GATEWAY_RECONNECT_BACKOFF_SEC: "1.0"
 

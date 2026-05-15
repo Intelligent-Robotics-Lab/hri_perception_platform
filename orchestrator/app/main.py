@@ -56,7 +56,7 @@ def startup_event():
     asr_worker = ASRWorker(
         audio_store=audio_store,
         perception_state=perception_state,
-        interval_sec=0.05,
+        interval_sec=0.2,
     )
     asr_worker.start()
 

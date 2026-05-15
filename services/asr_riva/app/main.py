@@ -1,30 +1,55 @@
+import os
 from datetime import datetime, timezone
+
+import requests
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
-app = FastAPI(title="asr_riva")
+SERVICE_NAME = "asr_riva"
+BACKEND_NAME = "asr_riva"
+UPSTREAM_TRANSCRIBE_URL = os.getenv("RIVA_UPSTREAM_TRANSCRIBE_URL")
+UPSTREAM_HEALTH_URL = os.getenv("RIVA_UPSTREAM_HEALTH_URL")
+LANGUAGE = os.getenv("ASR_LANGUAGE", "en")
+
+app = FastAPI(title=SERVICE_NAME)
 
 
 @app.get("/health")
 def health():
+    upstream_ok = None
+    upstream_error = None
+
+    if UPSTREAM_HEALTH_URL:
+        try:
+            r = requests.get(UPSTREAM_HEALTH_URL, timeout=2.0)
+            upstream_ok = r.ok
+        except Exception as e:
+            upstream_ok = False
+            upstream_error = repr(e)
+
     return {
         "status": "ok",
-        "service": "asr_riva",
-        "backend": "stub_riva",
-        "mode": "scaffold",
+        "service": SERVICE_NAME,
+        "backend": BACKEND_NAME,
+        "mode": "passthrough",
+        "language": LANGUAGE,
+        "upstream_configured": bool(UPSTREAM_TRANSCRIBE_URL),
+        "upstream_ok": upstream_ok,
+        "upstream_error": upstream_error,
     }
 
 
 @app.get("/metadata")
 def metadata():
     return {
-        "service_name": "asr_riva",
+        "service_name": SERVICE_NAME,
         "task": "speech_recognition",
-        "backend_name": "asr_riva",
-        "backend_mode": "scaffold",
+        "backend_name": BACKEND_NAME,
+        "backend_mode": "passthrough",
         "supports_streaming": False,
         "supports_partial_transcripts": False,
         "input_type": "audio_chunk",
         "output_type": "transcript",
+        "language": LANGUAGE,
     }
 
 
@@ -38,26 +63,65 @@ async def transcribe(
     channels: int | None = Form(default=None),
     encoding: str | None = Form(default=None),
 ):
+    if not UPSTREAM_TRANSCRIBE_URL:
+        raise HTTPException(
+            status_code=503,
+            detail="RIVA_UPSTREAM_TRANSCRIBE_URL is not configured"
+        )
+
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty uploaded audio")
 
-    now_iso = datetime.now(timezone.utc).isoformat()
+    files = {
+        "file": ("audio_chunk.bin", content, "application/octet-stream")
+    }
 
-    return {
-        "timestamp_utc": now_iso,
+    data = {
         "client_capture_timestamp": client_capture_timestamp,
         "server_ingest_timestamp": server_ingest_timestamp,
         "source_id": source_id,
-        "task": "speech_recognition",
-        "backend_name": "asr_riva",
-        "backend_mode": "scaffold",
         "sample_rate_hz": sample_rate_hz,
         "channels": channels,
         "encoding": encoding,
-        "is_partial": False,
-        "transcript": None,
-        "latency_ms": 0.0,
-        "warnings": ["Riva scaffold backend not yet connected to real ASR engine"],
-        "error": None,
+        "language": LANGUAGE,
     }
+
+    try:
+        r = requests.post(
+            UPSTREAM_TRANSCRIBE_URL,
+            files=files,
+            data=data,
+            timeout=15,
+        )
+        r.raise_for_status()
+        payload = r.json()
+    except Exception as e:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        return {
+            "timestamp_utc": now_iso,
+            "client_capture_timestamp": client_capture_timestamp,
+            "server_ingest_timestamp": server_ingest_timestamp,
+            "source_id": source_id,
+            "task": "speech_recognition",
+            "backend_name": BACKEND_NAME,
+            "backend_mode": "passthrough",
+            "sample_rate_hz": sample_rate_hz,
+            "channels": channels,
+            "encoding": encoding,
+            "is_partial": False,
+            "transcript": None,
+            "latency_ms": None,
+            "warnings": [],
+            "error": repr(e),
+            "meta": {
+                "language": LANGUAGE,
+                "upstream_configured": True,
+            },
+        }
+
+    payload["backend_name"] = BACKEND_NAME
+    payload["backend_mode"] = "passthrough"
+    payload.setdefault("meta", {})
+    payload["meta"]["language"] = LANGUAGE
+    return payload

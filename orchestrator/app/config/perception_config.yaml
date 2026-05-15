@@ -1,6 +1,6 @@
 runtime:
   enable_legacy_gst_video_bridge: false
-  signaling_host: "141.210.144.85"
+  signaling_host: "141.210.88.48"
   signaling_port: 8443
   signaling_use_tls: false
 
@@ -14,10 +14,12 @@ tasks:
         url: http://emotion_emotieff:8002
 
   speech_recognition:
-    active_backend: asr_riva
+    active_backend: asr_whisper
     backends:
+      asr_whisper:
+        url: http://asr_whisper:8003
       asr_riva:
-        url: http://asr_riva:8003
+        url: http://asr_riva:8004
 
   object_detection:
     active_backend: null
