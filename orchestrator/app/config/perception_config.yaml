@@ -14,7 +14,7 @@ tasks:
         url: http://emotion_emotieff:8002
 
   speech_recognition:
-    active_backend: asr_whisper
+    active_backend: asr_riva
     backends:
       asr_whisper:
         url: http://asr_whisper:8003

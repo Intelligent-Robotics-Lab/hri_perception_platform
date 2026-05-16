@@ -96,6 +96,33 @@ async def transcribe(
         )
         r.raise_for_status()
         payload = r.json()
+        text_value = payload.get("text")
+        transcript = text_value.strip() if isinstance(text_value, str) else None
+        if transcript == "":
+            transcript = None
+
+        return {
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "client_capture_timestamp": client_capture_timestamp,
+            "server_ingest_timestamp": server_ingest_timestamp,
+            "source_id": source_id,
+            "task": "speech_recognition",
+            "backend_name": BACKEND_NAME,
+            "backend_mode": "passthrough",
+            "sample_rate_hz": sample_rate_hz,
+            "channels": channels,
+            "encoding": encoding,
+            "is_partial": False,
+            "transcript": transcript,
+            "latency_ms": None,
+            "warnings": payload.get("warnings", []),
+            "error": None,
+            "meta": {
+                "language": LANGUAGE,
+                "upstream_configured": True,
+                "raw_text": text_value,
+            },
+        }
     except Exception as e:
         now_iso = datetime.now(timezone.utc).isoformat()
         return {

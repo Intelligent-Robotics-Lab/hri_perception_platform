@@ -48,6 +48,26 @@ services:
       ASR_COMPUTE_TYPE: "int8"
       ASR_LANGUAGE: "en"
 
+  riva_runtime:
+    image: nvcr.io/nim/nvidia/${CONTAINER_ID}:latest
+    container_name: riva_runtime
+    runtime: nvidia
+    ports:
+      - "9000:9000"
+      - "50051:50051"
+    shm_size: "8gb"
+    environment:
+      NGC_API_KEY: "${NGC_API_KEY}"
+      NIM_HTTP_API_PORT: "9000"
+      NIM_GRPC_API_PORT: "50051"
+      NIM_TAGS_SELECTOR: "${NIM_TAGS_SELECTOR}"
+    volumes:
+      - ./data/nim-cache:/opt/nim/.cache
+    ulimits:
+      nofile:
+        soft: 2048
+        hard: 2048
+
   asr_riva:
     build:
       context: .
@@ -56,9 +76,9 @@ services:
     ports:
       - "8004:8004"
     environment:
-      ASR_LANGUAGE: "en"
-      RIVA_UPSTREAM_TRANSCRIBE_URL: "http://riva_runtime:9000/transcribe"
-      RIVA_UPSTREAM_HEALTH_URL: "http://riva_runtime:9000/health"
+      ASR_LANGUAGE: "en-US"
+      RIVA_UPSTREAM_TRANSCRIBE_URL: "http://riva_runtime:9000/v1/audio/transcriptions"
+      RIVA_UPSTREAM_HEALTH_URL: "http://riva_runtime:9000/v1/health/ready"
 
   media_gateway:
     build:
