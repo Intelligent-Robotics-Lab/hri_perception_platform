@@ -1,0 +1,20 @@
+gst-launch-1.0 webrtcsink name=wsink `
+  signaller::uri="ws://141.210.88.210:8443" `
+  congestion-control=disabled `
+  enable-mitigation-modes=none `
+  video-caps="video/x-h264" `
+  mfvideosrc do-timestamp=true ! `
+  video/x-raw,width=640,height=480,framerate=15/1 ! `
+  queue max-size-buffers=4 leaky=downstream ! `
+  videoconvert ! `
+  x264enc tune=zerolatency speed-preset=veryfast bitrate=4000 key-int-max=30 bframes=0 ref=1 ! `
+  h264parse config-interval=1 ! `
+  queue max-size-buffers=4 leaky=downstream ! `
+  wsink. `
+  wasapisrc low-latency=true ! `
+  queue max-size-buffers=8 leaky=downstream ! `
+  audioconvert ! `
+  audioresample ! `
+  audio/x-raw,rate=48000,channels=1 ! `
+  queue max-size-buffers=8 leaky=downstream ! `
+  wsink.

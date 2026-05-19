@@ -89,6 +89,8 @@ services:
       - orchestrator
     ports:
       - "8010:8010"
+    volumes:               
+      - /tmp:/tmp
     environment:
       MEDIA_GATEWAY_SIGNALING_HOST: ${HRI_SIGNALING_HOST}
       MEDIA_GATEWAY_SIGNALING_PORT: ${HRI_SIGNALING_PORT}
