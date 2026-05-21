@@ -1,3 +1,4 @@
+import asyncio
 import base64
 from pathlib import Path
 from datetime import datetime, timezone
@@ -16,35 +17,34 @@ from app.state.perception_state import PerceptionState
 from app.workers.asr_worker import ASRWorker
 from app.workers.emotion_worker import EmotionWorker
 from app.routers.debug_router import router as debug_router
+from app.realtime.event_broadcaster import EventBroadcaster
+from app.routers.ws_router import build_ws_router
 
 app = FastAPI(title="orchestrator")
-
 app.include_router(debug_router)
 
 registry = PerceptionRegistry()
-
 face_detector = FaceDetector()
 
 frame_store = FrameStore()
 audio_store = AudioStore()
-
 frame_ingest_adapter = BootstrapHttpFrameIngestAdapter(frame_store)
 
 perception_state = PerceptionState()
+event_broadcaster = EventBroadcaster()
 
 emotion_worker = None
 asr_worker = None
 
 
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     global emotion_worker, asr_worker
 
-    # Production policy:
-    # - orchestrator is transport-agnostic
-    # - live media enters only through HTTP ingest from services/media_gateway
-    # - legacy direct GStreamer/WebRTC receive paths are not started here
     registry._reload_if_needed()
+
+    event_broadcaster.set_loop(asyncio.get_running_loop())
+    perception_state.add_listener(event_broadcaster.publish)
 
     emotion_worker = EmotionWorker(
         frame_store=frame_store,
@@ -70,6 +70,9 @@ def shutdown_event():
 
     if asr_worker is not None:
         asr_worker.stop()
+
+
+app.include_router(build_ws_router(event_broadcaster))
 
 
 @app.get("/health")
