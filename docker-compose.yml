@@ -34,6 +34,14 @@ services:
     container_name: emotion_emotieff
     ports:
       - "8002:8002"
+  
+  affect_hse_va:
+    build:
+      context: .
+      dockerfile: services/affect_hse_va/Dockerfile
+    container_name: affect_hse_va
+    ports:
+      - "8005:8005"
 
   asr_whisper:
     build:

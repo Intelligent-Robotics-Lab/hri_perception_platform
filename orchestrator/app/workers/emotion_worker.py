@@ -65,7 +65,6 @@ class EmotionWorker:
                 worker_start_timestamp = datetime.now(timezone.utc).isoformat()
                 worker_start_ts = iso_to_ts(worker_start_timestamp)
                 server_ingest_ts = iso_to_ts(packet.server_ingest_timestamp)
-                client_capture_ts = iso_to_ts(packet.client_capture_timestamp)
 
                 frame = packet.frame_bgr
                 active_model = get_active_emotion_model()

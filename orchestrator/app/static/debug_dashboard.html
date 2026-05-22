@@ -15,62 +15,76 @@
       --ok: #39d98a;
       --bad: #ff6b6b;
       --border: #2b3240;
+      --bar-pos: #7aa2ff;
+      --bar-neg: #ff8a8a;
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
       background: var(--bg);
       color: var(--text);
     }
+
     .wrap {
       max-width: 1500px;
       margin: 0 auto;
       padding: 16px;
     }
+
     h1 {
       margin: 0 0 14px 0;
       font-size: 24px;
     }
+
     .sub {
       color: var(--muted);
       margin-bottom: 14px;
       font-size: 14px;
     }
+
     .status-strip {
       display: grid;
       grid-template-columns: repeat(4, minmax(180px, 1fr));
       gap: 10px;
       margin-bottom: 16px;
     }
+
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 12px;
     }
+
     .metric-label {
       color: var(--muted);
       font-size: 12px;
       margin-bottom: 6px;
     }
+
     .metric-value {
       font-size: 20px;
       font-weight: 700;
       word-break: break-word;
     }
+
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
       align-items: start;
     }
+
     .image-card h2,
-    .info-card h2,
-    .asr-card h2 {
+    .asr-card h2,
+    .emotion-card h2 {
       margin: 0 0 10px 0;
       font-size: 18px;
     }
+
     .image-box {
       width: 100%;
       background: #0b0d12;
@@ -82,17 +96,20 @@
       align-items: center;
       justify-content: center;
     }
+
     img {
       width: 100%;
       height: auto;
       display: block;
     }
+
     .details {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 12px;
     }
+
     .kv {
       background: var(--panel-2);
       border: 1px solid var(--border);
@@ -100,16 +117,19 @@
       padding: 10px;
       min-height: 60px;
     }
+
     .kv .k {
       color: var(--muted);
       font-size: 12px;
       margin-bottom: 6px;
     }
+
     .kv .v {
       font-size: 15px;
       font-weight: 600;
       word-break: break-word;
     }
+
     .asr-transcript {
       min-height: 88px;
       padding: 14px;
@@ -120,15 +140,99 @@
       line-height: 1.4;
       white-space: pre-wrap;
     }
+
     .ok { color: var(--ok); }
     .bad { color: var(--bad); }
-    .footer {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 12px;
+
+    .emotion-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 16px;
+      margin-top: 8px;
     }
+
+    .emotion-category {
+      font-size: 30px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      text-transform: capitalize;
+    }
+
+    .emotion-sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .bar-wrap {
+      margin-bottom: 18px;
+    }
+
+    .bar-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .bar-track {
+      position: relative;
+      width: 100%;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .bar-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #c7cedb;
+      opacity: 0.55;
+      transform: translateX(-1px);
+      z-index: 2;
+    }
+
+    .bar-fill {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: var(--bar-pos);
+      z-index: 1;
+    }
+
+    .bar-fill.neg {
+      background: var(--bar-neg);
+    }
+
+    .score-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 14px;
+      padding: 8px 10px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
     @media (max-width: 980px) {
-      .status-strip, .grid, .details {
+      .status-strip,
+      .grid,
+      .details,
+      .emotion-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -137,7 +241,7 @@
 <body>
   <div class="wrap">
     <h1>HRI Perception Live Debug</h1>
-    <div class="sub">Operational preview for live video, emotion state, gateway health, and ASR output.</div>
+    <div class="sub">Operational preview for live video, emotion recognition, optional valence-arousal outputs, gateway health, and ASR output.</div>
 
     <div class="status-strip">
       <div class="card">
@@ -145,8 +249,8 @@
         <div class="metric-value" id="gatewayConnected">Loading...</div>
       </div>
       <div class="card">
-        <div class="metric-label">Emotion</div>
-        <div class="metric-value" id="emotionLabel">Loading...</div>
+        <div class="metric-label">Emotion category</div>
+        <div class="metric-value" id="emotionTopCategory">Loading...</div>
       </div>
       <div class="card">
         <div class="metric-label">Server pipeline latency</div>
@@ -174,17 +278,60 @@
       </div>
     </div>
 
-    <div class="card info-card" style="margin-top: 16px;">
-      <h2>Live Details</h2>
-      <div class="details">
-        <div class="kv"><div class="k">Face detected</div><div class="v" id="faceDetected">-</div></div>
-        <div class="kv"><div class="k">Confidence</div><div class="v" id="emotionConfidence">-</div></div>
-        <div class="kv"><div class="k">Frame ID</div><div class="v" id="frameId">-</div></div>
-        <div class="kv"><div class="k">Active emotion model</div><div class="v" id="activeModel">-</div></div>
-        <div class="kv"><div class="k">Backend inference latency</div><div class="v" id="backendLatency">-</div></div>
-        <div class="kv"><div class="k">Worker queue delay</div><div class="v" id="workerQueueDelay">-</div></div>
-        <div class="kv"><div class="k">Last video sample timestamp</div><div class="v" id="lastSampleTs">-</div></div>
-        <div class="kv"><div class="k">Last emotion timestamp</div><div class="v" id="emotionTs">-</div></div>
+    <div class="card emotion-card" style="margin-top: 16px;">
+      <h2>Emotion Recognition</h2>
+
+      <div class="emotion-grid">
+        <div>
+          <div class="emotion-category" id="emotionCategory">Loading...</div>
+          <div class="emotion-sub" id="emotionSummary">Waiting for emotion state...</div>
+
+          <div class="bar-wrap">
+            <div class="bar-head">
+              <span>Valence</span>
+              <span id="valenceValue">-</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-center"></div>
+              <div class="bar-fill" id="valenceBar"></div>
+            </div>
+          </div>
+
+          <div class="bar-wrap">
+            <div class="bar-head">
+              <span>Arousal</span>
+              <span id="arousalValue">-</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-center"></div>
+              <div class="bar-fill" id="arousalBar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="details" style="margin-top: 0;">
+          <div class="kv"><div class="k">Confidence</div><div class="v" id="emotionConfidence">-</div></div>
+          <div class="kv"><div class="k">Quadrant</div><div class="v" id="emotionQuadrant">-</div></div>
+          <div class="kv"><div class="k">Emotion model</div><div class="v" id="emotionModel">-</div></div>
+          <div class="kv"><div class="k">Backend latency</div><div class="v" id="emotionLatency">-</div></div>
+          <div class="kv"><div class="k">Frame ID</div><div class="v" id="emotionFrameId">-</div></div>
+          <div class="kv"><div class="k">Face detected</div><div class="v" id="emotionFaceDetected">-</div></div>
+          <div class="kv"><div class="k">Worker queue delay</div><div class="v" id="workerQueueDelay">-</div></div>
+          <div class="kv"><div class="k">Last video sample timestamp</div><div class="v" id="lastSampleTs">-</div></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <div class="metric-label" style="margin-bottom: 10px;">Category scores</div>
+        <div class="score-list">
+          <div class="score-row"><span>Happy</span><span id="scoreHappy">-</span></div>
+          <div class="score-row"><span>Neutral</span><span id="scoreNeutral">-</span></div>
+          <div class="score-row"><span>Sad</span><span id="scoreSad">-</span></div>
+          <div class="score-row"><span>Angry</span><span id="scoreAngry">-</span></div>
+          <div class="score-row"><span>Fear</span><span id="scoreFear">-</span></div>
+          <div class="score-row"><span>Disgust</span><span id="scoreDisgust">-</span></div>
+          <div class="score-row"><span>Surprise</span><span id="scoreSurprise">-</span></div>
+        </div>
       </div>
     </div>
 
@@ -199,7 +346,6 @@
         <div class="kv"><div class="k">Audio source</div><div class="v" id="asrSource">-</div></div>
         <div class="kv"><div class="k">ASR warnings</div><div class="v" id="asrWarnings">-</div></div>
       </div>
-      <div class="footer">If the current ASR backend is still scaffold mode, this area will show no transcript yet and will surface backend warnings instead.</div>
     </div>
   </div>
 
@@ -208,7 +354,8 @@
     const annotatedFrame = document.getElementById("annotatedFrame");
 
     function text(id, value) {
-      document.getElementById(id).textContent = value ?? "-";
+      const el = document.getElementById(id);
+      if (el) el.textContent = value ?? "-";
     }
 
     function fmtMs(value) {
@@ -216,15 +363,46 @@
       return `${Number(value).toFixed(2)} ms`;
     }
 
-    function fmtConfidence(value) {
+    function fmtPct(value) {
       if (value === null || value === undefined) return "-";
       return `${(Number(value) * 100).toFixed(1)}%`;
+    }
+
+    function fmtSigned(value) {
+      if (value === null || value === undefined) return "-";
+      const n = Number(value);
+      return `${n >= 0 ? "+" : ""}${n.toFixed(3)}`;
     }
 
     function setGatewayStatus(connected) {
       const el = document.getElementById("gatewayConnected");
       el.textContent = connected ? "Connected" : "Disconnected";
       el.className = `metric-value ${connected ? "ok" : "bad"}`;
+    }
+
+    function setCenteredBar(barId, rawValue) {
+      const el = document.getElementById(barId);
+      if (!el) return;
+
+      if (rawValue === null || rawValue === undefined) {
+        el.style.left = "50%";
+        el.style.width = "0%";
+        el.classList.remove("neg");
+        return;
+      }
+
+      const value = Math.max(-1, Math.min(1, Number(rawValue)));
+      const halfPercent = Math.abs(value) * 50;
+
+      if (value >= 0) {
+        el.style.left = "50%";
+        el.style.width = `${halfPercent}%`;
+        el.classList.remove("neg");
+      } else {
+        el.style.left = `${50 - halfPercent}%`;
+        el.style.width = `${halfPercent}%`;
+        el.classList.add("neg");
+      }
     }
 
     async function fetchJson(url) {
@@ -253,6 +431,7 @@
         const asrMetrics = asrMetricsWrap.metrics || null;
 
         setGatewayStatus(Boolean(gateway.session && gateway.session.connected));
+
         const frameCount = gateway.video?.forwarded_frame_count ?? 0;
         const audioCount = gateway.audio?.forwarded_audio_chunk_count ?? 0;
         text("mediaCounts", `${frameCount} / ${audioCount}`);
@@ -260,37 +439,86 @@
         text("audioLastSampleTs", gateway.audio?.last_sample_timestamp_utc ?? "-");
 
         if (emotionState) {
-          const prediction = emotionState.prediction || null;
-          text("emotionLabel", prediction?.dominant_label ?? "No prediction");
-          text("emotionConfidence", fmtConfidence(prediction?.confidence));
-          text("frameId", emotionState.frame_id ?? "-");
-          text("activeModel", emotionState.active_model ?? "-");
-          text("faceDetected", emotionState.face_detected ? "Yes" : "No");
-          text("emotionTs", prediction?.timestamp_utc ?? emotionState.server_ingest_timestamp ?? "-");
-        } else {
-          text("emotionLabel", "No state");
-          text("emotionConfidence", "-");
-          text("frameId", "-");
-          text("activeModel", "-");
-          text("faceDetected", "-");
-          text("emotionTs", "-");
-        }
+          const prediction = emotionState.prediction || {};
+          const scores = prediction.scores || {};
 
-        text("serverLatency", fmtMs(emotionMetrics?.server_pipeline_latency_ms));
-        text("backendLatency", fmtMs(emotionMetrics?.backend_inference_latency_ms));
-        text("workerQueueDelay", fmtMs(emotionMetrics?.worker_queue_delay_ms));
+          text("emotionTopCategory", prediction.dominant_label ?? "No prediction");
+          text("emotionCategory", prediction.dominant_label ?? "No prediction");
+
+          const hasVA = prediction.valence !== undefined && prediction.valence !== null &&
+                        prediction.arousal !== undefined && prediction.arousal !== null;
+
+          text(
+            "emotionSummary",
+            hasVA
+              ? `Valence ${fmtSigned(prediction.valence)} | Arousal ${fmtSigned(prediction.arousal)}`
+              : "Selected backend does not provide valence-arousal outputs"
+          );
+
+          text("valenceValue", hasVA ? fmtSigned(prediction.valence) : "-");
+          text("arousalValue", hasVA ? fmtSigned(prediction.arousal) : "-");
+          setCenteredBar("valenceBar", hasVA ? prediction.valence : null);
+          setCenteredBar("arousalBar", hasVA ? prediction.arousal : null);
+
+          text("emotionConfidence", fmtPct(prediction.confidence));
+          text("emotionQuadrant", hasVA ? (prediction.quadrant ?? "-") : "-");
+          text("emotionModel", emotionState.active_model ?? "-");
+          text("emotionLatency", fmtMs(emotionMetrics?.backend_inference_latency_ms));
+          text("emotionFrameId", emotionState.frame_id ?? "-");
+          text("emotionFaceDetected", emotionState.face_detected ? "Yes" : "No");
+
+          text("scoreHappy", fmtPct(scores.happy));
+          text("scoreNeutral", fmtPct(scores.neutral));
+          text("scoreSad", fmtPct(scores.sad));
+          text("scoreAngry", fmtPct(scores.angry));
+          text("scoreFear", fmtPct(scores.fear));
+          text("scoreDisgust", fmtPct(scores.disgust));
+          text("scoreSurprise", fmtPct(scores.surprise));
+
+          text("serverLatency", fmtMs(emotionMetrics?.server_pipeline_latency_ms));
+          text("workerQueueDelay", fmtMs(emotionMetrics?.worker_queue_delay_ms));
+        } else {
+          text("emotionTopCategory", "No state");
+          text("emotionCategory", "No state");
+          text("emotionSummary", "Waiting for emotion state...");
+          text("valenceValue", "-");
+          text("arousalValue", "-");
+          setCenteredBar("valenceBar", null);
+          setCenteredBar("arousalBar", null);
+
+          text("emotionConfidence", "-");
+          text("emotionQuadrant", "-");
+          text("emotionModel", "-");
+          text("emotionLatency", "-");
+          text("emotionFrameId", "-");
+          text("emotionFaceDetected", "-");
+
+          text("scoreHappy", "-");
+          text("scoreNeutral", "-");
+          text("scoreSad", "-");
+          text("scoreAngry", "-");
+          text("scoreFear", "-");
+          text("scoreDisgust", "-");
+          text("scoreSurprise", "-");
+
+          text("serverLatency", "-");
+          text("workerQueueDelay", "-");
+        }
 
         if (asrState) {
           const backend = asrState.backend_result || null;
           const transcript = backend?.transcript;
+
           document.getElementById("asrTranscript").textContent =
             transcript && transcript.trim().length > 0
               ? transcript
               : "No transcript yet";
+
           text("asrModel", asrState.active_model ?? "-");
           text("asrChunkId", asrState.chunk_id ?? "-");
           text("asrLatency", fmtMs(asrMetrics?.backend_inference_latency_ms));
           text("asrSource", asrState.source_id ?? "-");
+
           const warnings = backend?.warnings;
           text("asrWarnings", Array.isArray(warnings) && warnings.length ? warnings.join(" | ") : "-");
         } else {
@@ -303,7 +531,9 @@
         }
       } catch (err) {
         setGatewayStatus(false);
-        text("emotionLabel", "Fetch error");
+        text("emotionTopCategory", "Fetch error");
+        text("emotionCategory", "Fetch error");
+        text("emotionSummary", "Fetch error");
         document.getElementById("asrTranscript").textContent = "Fetch error";
         console.error(err);
       }

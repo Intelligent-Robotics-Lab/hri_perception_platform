@@ -6,12 +6,14 @@ runtime:
 
 tasks:
   emotion_recognition:
-    active_backend: emotion_hse
+    active_backend: affect_hse_va
     backends:
       emotion_hse:
         url: http://emotion_hse:8001
       emotion_emotieff:
         url: http://emotion_emotieff:8002
+      affect_hse_va:
+        url: http://affect_hse_va:8005
 
   speech_recognition:
     active_backend: asr_riva

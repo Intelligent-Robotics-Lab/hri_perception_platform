@@ -6,6 +6,9 @@ class PerceptionState:
     def __init__(self):
         self._lock = threading.Lock()
 
+        self._affect_result = None
+        self._affect_metrics = None
+        
         self._emotion_result: Optional[dict] = None
         self._emotion_metrics: Optional[dict] = None
 
@@ -27,6 +30,19 @@ class PerceptionState:
                 listener(event)
             except Exception:
                 pass
+
+    def update_affect(self, result: dict, metrics: dict):
+        with self._lock:
+            self._affect_result = result
+            self._affect_metrics = metrics
+
+    def get_affect(self):
+        with self._lock:
+            return self._affect_result
+
+    def get_affect_metrics(self):
+        with self._lock:
+            return self._affect_metrics
 
     def update_emotion(self, result: dict, metrics: dict):
         with self._lock:
