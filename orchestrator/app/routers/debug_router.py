@@ -2,10 +2,12 @@ from pathlib import Path
 
 import requests
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 
 
 router = APIRouter()
+
+GESTURE_IMAGE_PATH = Path("/data/debug/latest_gesture_overlay.jpg")
 
 DEBUG_DIR = Path("/data/debug")
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -55,3 +57,12 @@ def debug_gateway_status():
             "audio": {},
             "error": repr(e),
         }
+
+@router.get("/debug/image/gesture")
+def get_gesture_debug_image():
+    if not GESTURE_IMAGE_PATH.exists():
+        return JSONResponse(
+            status_code=404,
+            content={"status": "error", "message": "Gesture debug image not found"},
+        )
+    return FileResponse(GESTURE_IMAGE_PATH)

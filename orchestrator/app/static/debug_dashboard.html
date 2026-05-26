@@ -80,7 +80,8 @@
 
     .image-card h2,
     .asr-card h2,
-    .emotion-card h2 {
+    .emotion-card h2,
+    .gesture-card h2 {
       margin: 0 0 10px 0;
       font-size: 18px;
     }
@@ -144,21 +145,24 @@
     .ok { color: var(--ok); }
     .bad { color: var(--bad); }
 
-    .emotion-grid {
+    .emotion-grid,
+    .gesture-grid {
       display: grid;
       grid-template-columns: 1.1fr 0.9fr;
       gap: 16px;
       margin-top: 8px;
     }
 
-    .emotion-category {
+    .emotion-category,
+    .gesture-category {
       font-size: 30px;
       font-weight: 800;
       margin-bottom: 6px;
       text-transform: capitalize;
     }
 
-    .emotion-sub {
+    .emotion-sub,
+    .gesture-sub {
       color: var(--muted);
       font-size: 13px;
       margin-bottom: 14px;
@@ -228,11 +232,34 @@
       border-radius: 10px;
     }
 
+    .gesture-visual-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .gesture-visual-grid .image-box {
+      min-height: 220px;
+    }
+
+    #gesturePitchBar,
+    #gestureYawBar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      background: #7aa2ff;
+      width: 0%;
+    }
+
     @media (max-width: 980px) {
       .status-strip,
       .grid,
       .details,
-      .emotion-grid {
+      .emotion-grid,
+      .gesture-grid,
+      .gesture-visual-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -241,7 +268,7 @@
 <body>
   <div class="wrap">
     <h1>HRI Perception Live Debug</h1>
-    <div class="sub">Operational preview for live video, emotion recognition, optional valence-arousal outputs, gateway health, and ASR output.</div>
+    <div class="sub">Operational preview for live video, emotion recognition, head gesture visualization, gateway health, and ASR output.</div>
 
     <div class="status-strip">
       <div class="card">
@@ -253,8 +280,8 @@
         <div class="metric-value" id="emotionTopCategory">Loading...</div>
       </div>
       <div class="card">
-        <div class="metric-label">Server pipeline latency</div>
-        <div class="metric-value" id="serverLatency">Loading...</div>
+        <div class="metric-label">Head gesture</div>
+        <div class="metric-value" id="gestureTopCategory">Loading...</div>
       </div>
       <div class="card">
         <div class="metric-label">Forwarded frames / audio chunks</div>
@@ -335,6 +362,69 @@
       </div>
     </div>
 
+    <div class="card gesture-card" style="margin-top: 16px;">
+      <h2>Head Gesture</h2>
+
+      <div class="gesture-grid">
+        <div>
+          <div class="gesture-category" id="gestureCategory">Loading...</div>
+          <div class="gesture-sub" id="gestureSummary">Waiting for gesture state...</div>
+
+          <div class="bar-wrap">
+            <div class="bar-head">
+              <span>Pitch score</span>
+              <span id="gesturePitchScore">-</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" id="gesturePitchBar"></div>
+            </div>
+          </div>
+
+          <div class="bar-wrap">
+            <div class="bar-head">
+              <span>Yaw score</span>
+              <span id="gestureYawScore">-</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" id="gestureYawBar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="details" style="margin-top: 0;">
+          <div class="kv"><div class="k">Gesture backend</div><div class="v" id="gestureModel">-</div></div>
+          <div class="kv"><div class="k">Confidence</div><div class="v" id="gestureConfidence">-</div></div>
+          <div class="kv"><div class="k">Face detected</div><div class="v" id="gestureFaceDetected">-</div></div>
+          <div class="kv"><div class="k">Frame ID</div><div class="v" id="gestureFrameId">-</div></div>
+          <div class="kv"><div class="k">History size</div><div class="v" id="gestureHistorySize">-</div></div>
+          <div class="kv"><div class="k">Backend latency</div><div class="v" id="gestureLatency">-</div></div>
+          <div class="kv"><div class="k">X range</div><div class="v" id="gestureXRange">-</div></div>
+          <div class="kv"><div class="k">Y range</div><div class="v" id="gestureYRange">-</div></div>
+          <div class="kv"><div class="k">X zero crossings</div><div class="v" id="gestureXZero">-</div></div>
+          <div class="kv"><div class="k">Y zero crossings</div><div class="v" id="gestureYZero">-</div></div>
+          <div class="kv"><div class="k">dx</div><div class="v" id="gestureDx">-</div></div>
+          <div class="kv"><div class="k">dy</div><div class="v" id="gestureDy">-</div></div>
+          <div class="kv"><div class="k">Nod state</div><div class="v" id="gestureNodState">-</div></div>
+          <div class="kv"><div class="k">Shake state</div><div class="v" id="gestureShakeState">-</div></div>
+        </div>
+      </div>
+
+      <div class="gesture-visual-grid">
+        <div>
+          <div class="metric-label" style="margin-bottom: 8px;">Gesture overlay</div>
+          <div class="image-box">
+            <img id="gestureOverlayFrame" alt="Gesture overlay frame" />
+          </div>
+        </div>
+        <div>
+          <div class="metric-label" style="margin-bottom: 8px;">Live input frame reference</div>
+          <div class="image-box">
+            <img id="gestureInputReference" alt="Gesture input reference" />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card asr-card" style="margin-top: 16px;">
       <h2>Utterance</h2>
       <div class="asr-transcript" id="asrTranscript">Waiting for ASR...</div>
@@ -352,6 +442,8 @@
   <script>
     const inputFrame = document.getElementById("inputFrame");
     const annotatedFrame = document.getElementById("annotatedFrame");
+    const gestureOverlayFrame = document.getElementById("gestureOverlayFrame");
+    const gestureInputReference = document.getElementById("gestureInputReference");
 
     function text(id, value) {
       const el = document.getElementById(id);
@@ -372,6 +464,11 @@
       if (value === null || value === undefined) return "-";
       const n = Number(value);
       return `${n >= 0 ? "+" : ""}${n.toFixed(3)}`;
+    }
+
+    function fmtFloat(value) {
+      if (value === null || value === undefined) return "-";
+      return Number(value).toFixed(4);
     }
 
     function setGatewayStatus(connected) {
@@ -405,6 +502,20 @@
       }
     }
 
+    function setUnitBar(barId, rawValue) {
+      const el = document.getElementById(barId);
+      if (!el) return;
+
+      if (rawValue === null || rawValue === undefined) {
+        el.style.width = "0%";
+        return;
+      }
+
+      const value = Math.max(0, Math.min(1, Number(rawValue)));
+      el.style.left = "0";
+      el.style.width = `${value * 100}%`;
+    }
+
     async function fetchJson(url) {
       const r = await fetch(url, { cache: "no-store" });
       if (!r.ok) throw new Error(`${url} -> ${r.status}`);
@@ -415,18 +526,32 @@
       const cacheBust = Date.now();
       inputFrame.src = `/debug/image/input?t=${cacheBust}`;
       annotatedFrame.src = `/debug/image/annotated?t=${cacheBust}`;
+      gestureOverlayFrame.src = `/debug/image/gesture?t=${cacheBust}`;
+      gestureInputReference.src = `/debug/image/input?t=${cacheBust}`;
 
       try {
-        const [gateway, emotionStateWrap, emotionMetricsWrap, asrStateWrap, asrMetricsWrap] = await Promise.all([
+        const [
+          gateway,
+          emotionStateWrap,
+          emotionMetricsWrap,
+          gestureStateWrap,
+          gestureMetricsWrap,
+          asrStateWrap,
+          asrMetricsWrap
+        ] = await Promise.all([
           fetchJson("/debug/gateway-status"),
           fetchJson("/state/emotion"),
           fetchJson("/metrics/live/emotion"),
+          fetchJson("/state/gesture"),
+          fetchJson("/metrics/live/gesture"),
           fetchJson("/state/asr"),
           fetchJson("/metrics/live/asr"),
         ]);
 
         const emotionState = emotionStateWrap.emotion_state || null;
         const emotionMetrics = emotionMetricsWrap.metrics || null;
+        const gestureState = gestureStateWrap.gesture_state || null;
+        const gestureMetrics = gestureMetricsWrap.metrics || null;
         const asrState = asrStateWrap.asr_state || null;
         const asrMetrics = asrMetricsWrap.metrics || null;
 
@@ -475,7 +600,6 @@
           text("scoreDisgust", fmtPct(scores.disgust));
           text("scoreSurprise", fmtPct(scores.surprise));
 
-          text("serverLatency", fmtMs(emotionMetrics?.server_pipeline_latency_ms));
           text("workerQueueDelay", fmtMs(emotionMetrics?.worker_queue_delay_ms));
         } else {
           text("emotionTopCategory", "No state");
@@ -501,8 +625,76 @@
           text("scoreDisgust", "-");
           text("scoreSurprise", "-");
 
-          text("serverLatency", "-");
           text("workerQueueDelay", "-");
+        }
+
+        if (gestureState) {
+          const prediction = gestureState.prediction || {};
+          const motion = prediction.motion || {};
+          const meta = prediction.meta || {};
+
+          const detectedGesture = prediction.detected_gesture || "none";
+          const displayGesture = detectedGesture === "none" ? "No gesture" : detectedGesture;
+
+          text("gestureTopCategory", displayGesture);
+          text("gestureCategory", displayGesture);
+          text(
+            "gestureSummary",
+            gestureState.face_detected
+              ? "Latest temporal gesture estimate from live face crop"
+              : "No usable face/landmarks for gesture analysis"
+          );
+
+          text("gesturePitchScore", fmtFloat(motion.pitch_score));
+          text("gestureYawScore", fmtFloat(motion.yaw_score));
+          setUnitBar("gesturePitchBar", motion.pitch_score);
+          setUnitBar("gestureYawBar", motion.yaw_score);
+
+          text("gestureModel", gestureState.active_model ?? "-");
+          text("gestureConfidence", fmtFloat(prediction.confidence));
+          text("gestureFaceDetected", gestureState.face_detected ? "Yes" : "No");
+          text("gestureFrameId", gestureState.frame_id ?? "-");
+          text("gestureHistorySize", meta.history_size ?? "-");
+          text("gestureLatency", fmtMs(gestureMetrics?.backend_inference_latency_ms));
+          text("gestureXRange", fmtFloat(motion.x_range));
+          text("gestureYRange", fmtFloat(motion.y_range));
+          text("gestureXZero", motion.x_zero_crossings ?? "-");
+          text("gestureYZero", motion.y_zero_crossings ?? "-");
+          text("gestureDx", motion.dx ?? "-");
+          text("gestureDy", motion.dy ?? "-");
+          text("gestureNodState", motion.nod_state ?? "-");
+          text("gestureShakeState", motion.shake_state ?? "-");
+        } else {
+          text("gestureTopCategory", "No state");
+          text("gestureCategory", "No state");
+          text("gestureSummary", "Waiting for gesture state...");
+          text("gesturePitchScore", "-");
+          text("gestureYawScore", "-");
+          setUnitBar("gesturePitchBar", null);
+          setUnitBar("gestureYawBar", null);
+
+          text("gestureModel", "-");
+          text("gestureConfidence", "-");
+          text("gestureFaceDetected", "-");
+          text("gestureFrameId", "-");
+          text("gestureHistorySize", "-");
+          text("gestureLatency", "-");
+          text("gestureXRange", "-");
+          text("gestureYRange", "-");
+          text("gestureXZero", "-");
+          text("gestureYZero", "-");
+          text("gestureDx", "-");
+          text("gestureDy", "-");
+          text("gestureNodState", "-");
+          text("gestureShakeState", "-");
+        }
+
+        if (gestureMetrics) {
+          text("serverLatency", fmtMs(gestureMetrics.server_pipeline_latency_ms));
+        } else if (emotionMetrics) {
+          text("serverLatency", fmtMs(emotionMetrics.server_pipeline_latency_ms));
+        } else {
+          text("serverLatency", "-");
         }
 
         if (asrState) {
@@ -534,6 +726,9 @@
         text("emotionTopCategory", "Fetch error");
         text("emotionCategory", "Fetch error");
         text("emotionSummary", "Fetch error");
+        text("gestureTopCategory", "Fetch error");
+        text("gestureCategory", "Fetch error");
+        text("gestureSummary", "Fetch error");
         document.getElementById("asrTranscript").textContent = "Fetch error";
         console.error(err);
       }

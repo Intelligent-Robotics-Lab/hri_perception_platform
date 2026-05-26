@@ -1,19 +1,19 @@
 import threading
-from typing import Callable, Optional
+from typing import Optional, Callable
 
 
 class PerceptionState:
     def __init__(self):
         self._lock = threading.Lock()
 
-        self._affect_result = None
-        self._affect_metrics = None
-        
         self._emotion_result: Optional[dict] = None
         self._emotion_metrics: Optional[dict] = None
 
         self._asr_result: Optional[dict] = None
         self._asr_metrics: Optional[dict] = None
+
+        self._gesture_result: Optional[dict] = None
+        self._gesture_metrics: Optional[dict] = None
 
         self._listeners: list[Callable[[dict], None]] = []
 
@@ -24,25 +24,11 @@ class PerceptionState:
     def _emit(self, event: dict):
         with self._lock:
             listeners = list(self._listeners)
-
         for listener in listeners:
             try:
                 listener(event)
             except Exception:
                 pass
-
-    def update_affect(self, result: dict, metrics: dict):
-        with self._lock:
-            self._affect_result = result
-            self._affect_metrics = metrics
-
-    def get_affect(self):
-        with self._lock:
-            return self._affect_result
-
-    def get_affect_metrics(self):
-        with self._lock:
-            return self._affect_metrics
 
     def update_emotion(self, result: dict, metrics: dict):
         with self._lock:
@@ -100,3 +86,31 @@ class PerceptionState:
     def get_asr_metrics(self) -> Optional[dict]:
         with self._lock:
             return self._asr_metrics
+
+    def update_gesture(self, result: dict, metrics: dict):
+        with self._lock:
+            self._gesture_result = result
+            self._gesture_metrics = metrics
+
+        prediction = result.get("prediction") or {}
+        event = {
+            "event_type": "gesture_update",
+            "timestamp_utc": result.get("worker_finish_timestamp"),
+            "source_id": "media_gateway_video",
+            "payload": {
+                "frame_id": result.get("frame_id"),
+                "active_model": result.get("active_model"),
+                "face_detected": result.get("face_detected"),
+                "prediction": prediction,
+                "metrics": metrics,
+            },
+        }
+        self._emit(event)
+
+    def get_gesture(self) -> Optional[dict]:
+        with self._lock:
+            return self._gesture_result
+
+    def get_gesture_metrics(self) -> Optional[dict]:
+        with self._lock:
+            return self._gesture_metrics

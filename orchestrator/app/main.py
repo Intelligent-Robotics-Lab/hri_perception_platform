@@ -16,6 +16,7 @@ from app.routers.emotion_router import get_active_emotion_model, get_active_emot
 from app.state.perception_state import PerceptionState
 from app.workers.asr_worker import ASRWorker
 from app.workers.emotion_worker import EmotionWorker
+from app.workers.gesture_worker import GestureWorker
 from app.routers.debug_router import router as debug_router
 from app.realtime.event_broadcaster import EventBroadcaster
 from app.routers.ws_router import build_ws_router
@@ -35,11 +36,12 @@ event_broadcaster = EventBroadcaster()
 
 emotion_worker = None
 asr_worker = None
+gesture_worker = None
 
 
 @app.on_event("startup")
 async def startup_event():
-    global emotion_worker, asr_worker
+    global emotion_worker, asr_worker, gesture_worker
 
     registry._reload_if_needed()
 
@@ -53,6 +55,13 @@ async def startup_event():
     )
     emotion_worker.start()
 
+    gesture_worker = GestureWorker(
+        frame_store=frame_store,
+        perception_state=perception_state,
+        interval_sec=0.05,
+    )
+    gesture_worker.start()
+
     asr_worker = ASRWorker(
         audio_store=audio_store,
         perception_state=perception_state,
@@ -63,10 +72,13 @@ async def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global emotion_worker, asr_worker
+    global emotion_worker, asr_worker, gesture_worker
 
     if emotion_worker is not None:
         emotion_worker.stop()
+
+    if gesture_worker is not None:
+        gesture_worker.stop()
 
     if asr_worker is not None:
         asr_worker.stop()
@@ -164,6 +176,38 @@ def get_emotion_metrics():
         return {
             "status": "ok",
             "message": "No live emotion metrics yet",
+            "metrics": None,
+        }
+
+    return {
+        "status": "ok",
+        "metrics": metrics,
+    }
+
+
+@app.get("/state/gesture")
+def get_gesture_state():
+    gesture_state = perception_state.get_gesture()
+    if gesture_state is None:
+        return {
+            "status": "ok",
+            "message": "No gesture state yet",
+            "gesture_state": None,
+        }
+
+    return {
+        "status": "ok",
+        "gesture_state": gesture_state,
+    }
+
+
+@app.get("/metrics/live/gesture")
+def get_gesture_metrics():
+    metrics = perception_state.get_gesture_metrics()
+    if metrics is None:
+        return {
+            "status": "ok",
+            "message": "No live gesture metrics yet",
             "metrics": None,
         }
 

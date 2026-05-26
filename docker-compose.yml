@@ -124,3 +124,13 @@ services:
     container_name: webrtc_signaling
     ports:
       - "8443:8443"
+
+  gesture_recognition:
+    build:
+      context: .
+      dockerfile: services/gesture_recognition/Dockerfile
+    container_name: gesture_recognition
+    ports:
+      - "8006:8006"
+    volumes:
+      - ./data:/data
