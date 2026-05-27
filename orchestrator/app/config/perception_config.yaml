@@ -28,7 +28,7 @@ tasks:
     backends: {}
 
   gesture_recognition:
-    active_backend: gesture_head_motion
+    active_backend: gesture_holistic_events
     backends:
-      gesture_head_motion:
+      gesture_holistic_events:
         url: http://gesture_recognition:8006

@@ -1,47 +1,34 @@
 import base64
 import io
 import time
-from collections import deque
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Deque, Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import cv2
 import numpy as np
 from PIL import Image
 from fastapi import FastAPI
 from pydantic import BaseModel
-from mediapipe.python.solutions.face_mesh import FaceMesh
+import mediapipe as mp
 
 
 app = FastAPI(title="gesture_recognition")
 
 SERVICE_NAME = "gesture_recognition"
-BACKEND_NAME = "gesture_head_motion"
-MODEL_NAME = "mediapipe_face_mesh_simple_temporal"
-MODEL_VERSION = "v5_overlay_debug"
+BACKEND_NAME = "gesture_holistic_events"
+MODEL_NAME = "mediapipe_holistic_event_detector"
+MODEL_VERSION = "v2_old_style_port_latched_display"
 DEVICE = "cpu"
-
-# Face landmark indices
-UPPER_FACE_IDX = 10
-NOSE_TIP_IDX = 1
-CHIN_IDX = 152
-LEFT_FACE_IDX = 234
-RIGHT_FACE_IDX = 454
-
-# Temporal settings
-HISTORY_MAXLEN = 20
-COOLDOWN_SEC = 1.0
-
-# Simple event thresholds
-NOD_DELTA_THRESH = 0.035
-SHAKE_DELTA_THRESH = 0.045
-
-MIN_VALID_FACE_WIDTH = 1e-4
-MIN_VALID_FACE_HEIGHT = 1e-4
 
 DEBUG_DIR = Path("/data/debug")
 GESTURE_OVERLAY_PATH = DEBUG_DIR / "latest_gesture_overlay.jpg"
+
+ACTION_COOLDOWN_SEC = 0.9
+DISPLAY_HOLD_SEC = 1.25
+
+NOD_DELTA = 0.010
+SHAKE_DELTA = 0.012
+RESET_EPS = 0.003
 
 
 class ImagePayload(BaseModel):
@@ -58,178 +45,136 @@ class GesturePredictRequest(BaseModel):
     meta: Dict = {}
 
 
-@dataclass
-class MotionSample:
-    timestamp_monotonic: float
-    x_norm: float
-    y_norm: float
-
-
-class HeadMotionDetector:
+class GestureEventDetector:
     def __init__(self):
-        self.history: Deque[MotionSample] = deque(maxlen=HISTORY_MAXLEN)
-        self.last_detection_time = 0.0
-
-        self.prev_x: Optional[float] = None
-        self.prev_y: Optional[float] = None
+        self.prev_nose_x: Optional[float] = None
+        self.prev_nose_y: Optional[float] = None
 
         self.nod_state: Optional[str] = None
         self.shake_state: Optional[str] = None
 
-    def update(self, x_norm: float, y_norm: float) -> Dict:
+        self.last_action = "none"
+        self.last_detection_time = 0.0
+
+        self.last_display_gesture = "none"
+        self.last_display_confidence = 0.0
+        self.last_display_time = 0.0
+
+    def in_cooldown(self) -> bool:
+        return (time.monotonic() - self.last_detection_time) < ACTION_COOLDOWN_SEC
+
+    def in_display_hold(self) -> bool:
+        return (time.monotonic() - self.last_display_time) < DISPLAY_HOLD_SEC
+
+    def update(self, nose_x: Optional[float], nose_y: Optional[float]) -> Dict:
         now = time.monotonic()
-        self.history.append(MotionSample(timestamp_monotonic=now, x_norm=x_norm, y_norm=y_norm))
 
-        dx = None if self.prev_x is None else (x_norm - self.prev_x)
-        dy = None if self.prev_y is None else (y_norm - self.prev_y)
+        dx = None
+        dy = None
+        instant_gesture = "none"
+        instant_confidence = 0.0
 
-        xs = np.array([s.x_norm for s in self.history], dtype=np.float32)
-        ys = np.array([s.y_norm for s in self.history], dtype=np.float32)
+        if nose_x is not None and self.prev_nose_x is not None:
+            dx = nose_x - self.prev_nose_x
 
-        x_range = float(xs.max() - xs.min()) if len(xs) > 0 else 0.0
-        y_range = float(ys.max() - ys.min()) if len(ys) > 0 else 0.0
+        if nose_y is not None and self.prev_nose_y is not None:
+            dy = nose_y - self.prev_nose_y
 
-        x_centered = xs - xs.mean() if len(xs) > 0 else np.array([])
-        y_centered = ys - ys.mean() if len(ys) > 0 else np.array([])
+        if not self.in_cooldown():
+            if dy is not None:
+                if dy > NOD_DELTA:
+                    self.nod_state = "down"
+                elif dy < -NOD_DELTA and self.nod_state == "down":
+                    instant_gesture = "nod"
+                    instant_confidence = min(1.0, abs(dy) / max(NOD_DELTA, 1e-6))
+                    self.last_detection_time = now
+                    self.nod_state = "cool"
+                    self.shake_state = None
 
-        x_zero_crossings = self._zero_crossings(x_centered) if len(x_centered) >= 3 else 0
-        y_zero_crossings = self._zero_crossings(y_centered) if len(y_centered) >= 3 else 0
-
-        x_energy = float(np.mean(np.abs(np.diff(x_centered)))) if len(x_centered) > 1 else 0.0
-        y_energy = float(np.mean(np.abs(np.diff(y_centered)))) if len(y_centered) > 1 else 0.0
-
-        nod_score = min(1.0, y_range / max(NOD_DELTA_THRESH * 2.0, 1e-6))
-        shake_score = min(1.0, x_range / max(SHAKE_DELTA_THRESH * 2.0, 1e-6))
-
-        detected_gesture = "none"
-        confidence = 0.0
-
-        in_cooldown = (now - self.last_detection_time) < COOLDOWN_SEC
-
-        if not in_cooldown and dy is not None:
-            if dy > NOD_DELTA_THRESH:
-                self.nod_state = "down"
-            elif dy < -NOD_DELTA_THRESH and self.nod_state == "down":
-                detected_gesture = "nod"
-                confidence = nod_score
-                self.last_detection_time = now
-                self.nod_state = "cool"
-                self.shake_state = None
-
-        if detected_gesture == "none" and not in_cooldown and dx is not None:
-            if dx > SHAKE_DELTA_THRESH:
-                self.shake_state = "right"
-            elif dx < -SHAKE_DELTA_THRESH and self.shake_state == "right":
-                detected_gesture = "shake_head"
-                confidence = shake_score
-                self.last_detection_time = now
-                self.shake_state = "cool"
-                self.nod_state = None
-            elif dx < -SHAKE_DELTA_THRESH:
-                self.shake_state = "left"
-            elif dx > SHAKE_DELTA_THRESH and self.shake_state == "left":
-                detected_gesture = "shake_head"
-                confidence = shake_score
-                self.last_detection_time = now
-                self.shake_state = "cool"
-                self.nod_state = None
-
-        if in_cooldown:
+            if instant_gesture == "none" and dx is not None:
+                if dx > SHAKE_DELTA:
+                    if self.shake_state == "left":
+                        instant_gesture = "shake_head"
+                        instant_confidence = min(1.0, abs(dx) / max(SHAKE_DELTA, 1e-6))
+                        self.last_detection_time = now
+                        self.shake_state = "cool"
+                        self.nod_state = None
+                    else:
+                        self.shake_state = "right"
+                elif dx < -SHAKE_DELTA:
+                    if self.shake_state == "right":
+                        instant_gesture = "shake_head"
+                        instant_confidence = min(1.0, abs(dx) / max(SHAKE_DELTA, 1e-6))
+                        self.last_detection_time = now
+                        self.shake_state = "cool"
+                        self.nod_state = None
+                    else:
+                        self.shake_state = "left"
+        else:
             self.nod_state = "cool"
             self.shake_state = "cool"
-        elif detected_gesture == "none":
+
+        if dx is not None and dy is not None and abs(dx) < RESET_EPS and abs(dy) < RESET_EPS and not self.in_cooldown():
             if self.nod_state == "cool":
                 self.nod_state = None
             if self.shake_state == "cool":
                 self.shake_state = None
 
-        self.prev_x = x_norm
-        self.prev_y = y_norm
+        if nose_x is not None:
+            self.prev_nose_x = nose_x
+        if nose_y is not None:
+            self.prev_nose_y = nose_y
+
+        if instant_gesture != "none":
+            self.last_action = instant_gesture
+            self.last_display_gesture = instant_gesture
+            self.last_display_confidence = instant_confidence
+            self.last_display_time = now
+
+        if instant_gesture != "none":
+            detected_gesture = instant_gesture
+            confidence = instant_confidence
+        elif self.in_display_hold():
+            detected_gesture = self.last_display_gesture
+            confidence = self.last_display_confidence
+        else:
+            detected_gesture = "none"
+            confidence = 0.0
 
         return {
+            "instant_gesture": instant_gesture,
             "detected_gesture": detected_gesture,
             "confidence": round(float(confidence), 4),
             "motion": {
-                "pitch_score": round(float(nod_score), 4),
-                "yaw_score": round(float(shake_score), 4),
-                "x_range": round(float(x_range), 4),
-                "y_range": round(float(y_range), 4),
-                "x_zero_crossings": int(x_zero_crossings),
-                "y_zero_crossings": int(y_zero_crossings),
-                "x_energy": round(float(x_energy), 4),
-                "y_energy": round(float(y_energy), 4),
                 "dx": None if dx is None else round(float(dx), 4),
                 "dy": None if dy is None else round(float(dy), 4),
+                "nose_x": None if nose_x is None else round(float(nose_x), 4),
+                "nose_y": None if nose_y is None else round(float(nose_y), 4),
                 "nod_state": self.nod_state,
                 "shake_state": self.shake_state,
+                "cooldown_active": self.in_cooldown(),
+                "display_hold_active": self.in_display_hold(),
             },
-            "normalized_reference": {
-                "nose_x_norm": round(float(x_norm), 4),
-                "nose_y_norm": round(float(y_norm), 4),
-            },
-            "history_size": len(self.history),
+            "last_action": self.last_action,
         }
 
-    def _zero_crossings(self, arr: np.ndarray) -> int:
-        signs = np.sign(arr).copy()
-        for i in range(1, len(signs)):
-            if signs[i] == 0:
-                signs[i] = signs[i - 1]
-        return int(np.sum(signs[:-1] * signs[1:] < 0))
+
+mp_holistic = mp.solutions.holistic
+mp_drawing = mp.solutions.drawing_utils
+
+holistic = mp_holistic.Holistic(
+    static_image_mode=False,
+    model_complexity=1,
+    smooth_landmarks=True,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5,
+)
+
+detector = GestureEventDetector()
 
 
-class FaceMeshTracker:
-    def __init__(self):
-        self.face_mesh = FaceMesh(
-            static_image_mode=False,
-            max_num_faces=1,
-            refine_landmarks=False,
-            min_detection_confidence=0.3,
-            min_tracking_confidence=0.3,
-        )
-
-    def extract_reference(self, image_bgr: np.ndarray):
-        h, w = image_bgr.shape[:2]
-        image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-        result = self.face_mesh.process(image_rgb)
-
-        if not result.multi_face_landmarks:
-            return None, None
-
-        landmarks = result.multi_face_landmarks[0].landmark
-
-        upper_face = landmarks[UPPER_FACE_IDX]
-        nose = landmarks[NOSE_TIP_IDX]
-        chin = landmarks[CHIN_IDX]
-        left_face = landmarks[LEFT_FACE_IDX]
-        right_face = landmarks[RIGHT_FACE_IDX]
-
-        face_width = abs(right_face.x - left_face.x)
-        face_height = abs(chin.y - upper_face.y)
-
-        if face_width < MIN_VALID_FACE_WIDTH or face_height < MIN_VALID_FACE_HEIGHT:
-            return None, None
-
-        face_center_x = (left_face.x + right_face.x) / 2.0
-        face_center_y = (upper_face.y + chin.y) / 2.0
-
-        nose_x_norm = (nose.x - face_center_x) / face_width
-        nose_y_norm = (nose.y - face_center_y) / face_height
-
-        nose_x_norm = float(np.clip(nose_x_norm, -1.5, 1.5))
-        nose_y_norm = float(np.clip(nose_y_norm, -1.5, 1.5))
-
-        meta = {
-            "nose_px": [int(nose.x * w), int(nose.y * h)],
-            "face_width_norm": round(float(face_width), 4),
-            "face_height_norm": round(float(face_height), 4),
-        }
-
-        return (nose_x_norm, nose_y_norm, meta), result.multi_face_landmarks[0]
-
-
-tracker = FaceMeshTracker()
-detector = HeadMotionDetector()
+def ensure_debug_dir():
+    DEBUG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def decode_base64_image(image_b64: str) -> np.ndarray:
@@ -239,58 +184,62 @@ def decode_base64_image(image_b64: str) -> np.ndarray:
     return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 
 
-def ensure_debug_dir():
-    DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+def draw_text(vis: np.ndarray, text: str, x: int, y: int, scale: float = 0.48):
+    cv2.putText(
+        vis,
+        text,
+        (x, y),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        scale,
+        (0, 255, 0),
+        1,
+        cv2.LINE_AA,
+    )
 
 
-def draw_gesture_overlay(
-    image_bgr: np.ndarray,
-    face_landmarks,
-    prediction_payload: dict,
-):
-    vis = image_bgr.copy()
-    h, w = vis.shape[:2]
+def save_overlay(frame_bgr: np.ndarray, results, response: dict):
+    vis = frame_bgr.copy()
 
-    if face_landmarks is not None:
-        for lm in face_landmarks.landmark:
-            x = int(lm.x * w)
-            y = int(lm.y * h)
-            cv2.circle(vis, (x, y), 1, (0, 255, 255), -1)
+    if results.face_landmarks:
+        mp_drawing.draw_landmarks(
+            vis,
+            results.face_landmarks,
+            mp_holistic.FACEMESH_CONTOURS,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=mp_drawing.DrawingSpec(thickness=1, circle_radius=1),
+        )
+    if results.pose_landmarks:
+        mp_drawing.draw_landmarks(vis, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+    if results.left_hand_landmarks:
+        mp_drawing.draw_landmarks(vis, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+    if results.right_hand_landmarks:
+        mp_drawing.draw_landmarks(vis, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
-    meta = prediction_payload.get("meta", {})
-    motion = prediction_payload.get("motion", {}) or {}
-    detected = prediction_payload.get("detected_gesture", "none")
-    confidence = prediction_payload.get("confidence", 0.0)
+    overlay = vis.copy()
+    cv2.rectangle(overlay, (4, 4), (320, 190), (0, 0, 0), -1)
+    cv2.addWeighted(overlay, 0.45, vis, 0.55, 0, vis)
 
-    nose_px = meta.get("nose_px")
-    if nose_px and len(nose_px) == 2:
-        cv2.circle(vis, tuple(nose_px), 4, (0, 0, 255), -1)
+    motion = response.get("motion") or {}
 
     lines = [
-        f"Gesture: {detected}",
-        f"Confidence: {confidence:.3f}",
+        f"Gesture: {response.get('detected_gesture', 'none')}",
+        f"Instant: {response.get('instant_gesture', 'none')}",
+        f"Confidence: {response.get('confidence', 0.0):.3f}",
         f"dx: {motion.get('dx', '-')}",
         f"dy: {motion.get('dy', '-')}",
-        f"Pitch score: {motion.get('pitch_score', '-')}",
-        f"Yaw score: {motion.get('yaw_score', '-')}",
+        f"nose_x: {motion.get('nose_x', '-')}",
+        f"nose_y: {motion.get('nose_y', '-')}",
         f"Nod state: {motion.get('nod_state', '-')}",
         f"Shake state: {motion.get('shake_state', '-')}",
-        f"History: {meta.get('history_size', '-')}",
+        f"Cooldown: {motion.get('cooldown_active', False)}",
+        f"Hold: {motion.get('display_hold_active', False)}",
+        f"Last action: {response.get('last_action', 'none')}",
     ]
 
-    y0 = 18
+    y = 20
     for line in lines:
-        cv2.putText(
-            vis,
-            str(line),
-            (8, y0),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.42,
-            (0, 255, 0),
-            1,
-            cv2.LINE_AA,
-        )
-        y0 += 18
+        draw_text(vis, line, 10, y)
+        y += 16
 
     ensure_debug_dir()
     cv2.imwrite(str(GESTURE_OVERLAY_PATH), vis)
@@ -315,7 +264,7 @@ def metadata():
         "task": "gesture_recognition",
         "backend_name": BACKEND_NAME,
         "backend_mode": "real",
-        "input_type": "frame_or_face_crop",
+        "input_type": "full_frame",
         "output_type": "gesture_event",
         "supported_gestures": ["nod", "shake_head"],
         "model_name": MODEL_NAME,
@@ -331,42 +280,18 @@ def predict(req: GesturePredictRequest):
 
     try:
         frame_bgr = decode_base64_image(req.image.data)
-        input_kind = str(req.meta.get("input_kind", "frame")).lower()
+        image_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        results = holistic.process(image_rgb)
 
-        ref, face_landmarks = tracker.extract_reference(frame_bgr)
+        nose_x = None
+        nose_y = None
 
-        if ref is None:
-            latency_ms = (time.perf_counter() - started) * 1000.0
-            warning = (
-                "No landmarks detected on face crop"
-                if input_kind == "face_crop"
-                else "No face detected"
-            )
-            response = {
-                "timestamp_utc": req.timestamp_utc,
-                "session_id": req.session_id,
-                "frame_id": req.frame_id,
-                "source_id": req.source_id,
-                "task": "gesture_recognition",
-                "backend_name": BACKEND_NAME,
-                "backend_mode": "real",
-                "detected_gesture": "none",
-                "confidence": 0.0,
-                "motion": None,
-                "face_detected": False,
-                "latency_ms": latency_ms,
-                "warnings": [warning],
-                "error": None,
-                "meta": {
-                    "input_kind": input_kind,
-                    "frame_shape": list(frame_bgr.shape),
-                },
-            }
-            draw_gesture_overlay(frame_bgr, None, response)
-            return response
+        if results.pose_landmarks:
+            nose = results.pose_landmarks.landmark[mp_holistic.PoseLandmark.NOSE]
+            nose_x = float(nose.x)
+            nose_y = float(nose.y)
 
-        x_norm, y_norm, ref_meta = ref
-        motion_result = detector.update(x_norm=x_norm, y_norm=y_norm)
+        event = detector.update(nose_x=nose_x, nose_y=nose_y)
         latency_ms = (time.perf_counter() - started) * 1000.0
 
         response = {
@@ -377,21 +302,22 @@ def predict(req: GesturePredictRequest):
             "task": "gesture_recognition",
             "backend_name": BACKEND_NAME,
             "backend_mode": "real",
-            "detected_gesture": motion_result["detected_gesture"],
-            "confidence": motion_result["confidence"],
-            "motion": motion_result["motion"],
-            "face_detected": True,
+            "instant_gesture": event["instant_gesture"],
+            "detected_gesture": event["detected_gesture"],
+            "confidence": event["confidence"],
+            "motion": event["motion"],
+            "last_action": event["last_action"],
+            "face_detected": bool(results.face_landmarks or results.pose_landmarks),
             "latency_ms": latency_ms,
-            "warnings": [],
+            "warnings": [] if results.pose_landmarks else ["No pose landmarks detected"],
             "error": None,
             "meta": {
-                **ref_meta,
-                "input_kind": input_kind,
-                "history_size": motion_result["history_size"],
-                "normalized_reference": motion_result["normalized_reference"],
+                "input_kind": str(req.meta.get("input_kind", "frame")).lower(),
+                "frame_shape": list(frame_bgr.shape),
             },
         }
-        draw_gesture_overlay(frame_bgr, face_landmarks, response)
+
+        save_overlay(frame_bgr, results, response)
         return response
 
     except Exception as e:
@@ -404,9 +330,11 @@ def predict(req: GesturePredictRequest):
             "task": "gesture_recognition",
             "backend_name": BACKEND_NAME,
             "backend_mode": "real",
+            "instant_gesture": "none",
             "detected_gesture": "none",
             "confidence": 0.0,
             "motion": None,
+            "last_action": "none",
             "face_detected": False,
             "latency_ms": latency_ms,
             "warnings": ["Prediction failed"],
@@ -414,7 +342,9 @@ def predict(req: GesturePredictRequest):
             "meta": {},
         }
         try:
-            draw_gesture_overlay(np.zeros((240, 240, 3), dtype=np.uint8), None, response)
+            ensure_debug_dir()
+            blank = np.zeros((240, 320, 3), dtype=np.uint8)
+            cv2.imwrite(str(GESTURE_OVERLAY_PATH), blank)
         except Exception:
             pass
         return response

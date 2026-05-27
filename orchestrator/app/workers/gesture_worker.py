@@ -7,7 +7,6 @@ from typing import Optional
 import cv2
 import requests
 
-from app.face_detector import FaceDetector
 from app.ingest.frame_store import FrameStore
 from app.routers.gesture_router import get_active_gesture_model, get_active_gesture_url
 from app.state.perception_state import PerceptionState
@@ -24,7 +23,6 @@ class GestureWorker:
         self.frame_store = frame_store
         self.perception_state = perception_state
         self.interval_sec = interval_sec
-        self.detector = FaceDetector()
         self.running = False
         self.thread = None
         self.last_processed_frame_id: Optional[int] = None
@@ -39,8 +37,8 @@ class GestureWorker:
     def stop(self):
         self.running = False
 
-    def _encode_crop_to_b64(self, face_crop_bgr):
-        ok, encoded = cv2.imencode(".jpg", face_crop_bgr)
+    def _encode_frame_to_b64(self, frame_bgr):
+        ok, encoded = cv2.imencode(".jpg", frame_bgr)
         if not ok:
             return None
         return base64.b64encode(encoded.tobytes()).decode("utf-8")
@@ -68,43 +66,7 @@ class GestureWorker:
                 frame = packet.frame_bgr
                 active_model = get_active_gesture_model()
 
-                detected = self.detector.detect_largest_face(frame)
-
-                if detected is None:
-                    worker_finish_timestamp = datetime.now(timezone.utc).isoformat()
-                    worker_finish_ts = iso_to_ts(worker_finish_timestamp)
-
-                    result = {
-                        "frame_id": packet.frame_id,
-                        "client_capture_timestamp": packet.client_capture_timestamp,
-                        "server_ingest_timestamp": packet.server_ingest_timestamp,
-                        "worker_start_timestamp": worker_start_timestamp,
-                        "worker_finish_timestamp": worker_finish_timestamp,
-                        "active_model": active_model,
-                        "face_detected": False,
-                        "bbox_xyxy": None,
-                        "prediction": None,
-                    }
-
-                    metrics = {
-                        "frame_id": packet.frame_id,
-                        "active_model": active_model,
-                        "face_detected": False,
-                        "worker_queue_delay_ms": round((worker_start_ts - server_ingest_ts) * 1000, 2) if server_ingest_ts else None,
-                        "backend_inference_latency_ms": None,
-                        "server_pipeline_latency_ms": round((worker_finish_ts - server_ingest_ts) * 1000, 2) if server_ingest_ts else None,
-                        "end_to_end_latency_ms": None,
-                        "end_to_end_latency_note": "not computed on server because client and server clocks are not guaranteed synchronized",
-                    }
-
-                    self.perception_state.update_gesture(result, metrics)
-                    time.sleep(self.interval_sec)
-                    continue
-
-                bbox_xyxy = detected["bbox_xyxy"]
-                face_crop_bgr = detected["face_crop_bgr"]
-
-                image_b64 = self._encode_crop_to_b64(face_crop_bgr)
+                image_b64 = self._encode_frame_to_b64(frame)
                 if image_b64 is None:
                     time.sleep(self.interval_sec)
                     continue
@@ -120,8 +82,7 @@ class GestureWorker:
                     },
                     "meta": {
                         "mode": "live",
-                        "bbox_xyxy": bbox_xyxy,
-                        "input_kind": "face_crop",
+                        "input_kind": "frame",
                     },
                 }
 
@@ -153,7 +114,7 @@ class GestureWorker:
                     "worker_finish_timestamp": worker_finish_timestamp,
                     "active_model": active_model,
                     "face_detected": face_detected,
-                    "bbox_xyxy": bbox_xyxy,
+                    "bbox_xyxy": None,
                     "prediction": prediction,
                 }
 

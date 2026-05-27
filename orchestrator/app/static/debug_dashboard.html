@@ -243,6 +243,25 @@
       min-height: 220px;
     }
 
+    .gesture-fixed-box {
+      width: 100%;
+      height: 320px;
+      background: #0b0d12;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+.gesture-fixed-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
     #gesturePitchBar,
     #gestureYawBar {
       position: absolute;
@@ -412,18 +431,17 @@
       <div class="gesture-visual-grid">
         <div>
           <div class="metric-label" style="margin-bottom: 8px;">Gesture overlay</div>
-          <div class="image-box">
+          <div class="gesture-fixed-box">
             <img id="gestureOverlayFrame" alt="Gesture overlay frame" />
           </div>
         </div>
         <div>
           <div class="metric-label" style="margin-bottom: 8px;">Live input frame reference</div>
-          <div class="image-box">
+          <div class="gesture-fixed-box">
             <img id="gestureInputReference" alt="Gesture input reference" />
           </div>
         </div>
       </div>
-    </div>
 
     <div class="card asr-card" style="margin-top: 16px;">
       <h2>Utterance</h2>
