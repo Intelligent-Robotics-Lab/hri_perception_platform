@@ -7,165 +7,461 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg: #0f1115;
-      --panel: #171a21;
-      --panel-2: #1f2430;
-      --text: #e7eaf0;
-      --muted: #a7b0c0;
-      --ok: #39d98a;
-      --bad: #ff6b6b;
-      --border: #2b3240;
-      --bar-pos: #7aa2ff;
-      --bar-neg: #ff8a8a;
+      --bg: #0b1020;
+      --bg-accent: #11182d;
+      --panel: rgba(20, 27, 45, 0.92);
+      --panel-2: rgba(29, 38, 61, 0.9);
+      --panel-3: rgba(15, 20, 34, 0.9);
+      --text: #edf2ff;
+      --muted: #9eabc7;
+      --muted-2: #7e8aaa;
+      --ok: #35d399;
+      --bad: #fb7185;
+      --warn: #fbbf24;
+      --border: rgba(148, 163, 184, 0.16);
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      --bar-pos: #60a5fa;
+      --bar-neg: #fb7185;
+      --bar-gesture: #818cf8;
+      --chip: rgba(96, 165, 250, 0.12);
+      --chip-border: rgba(96, 165, 250, 0.28);
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 12px;
     }
 
     * { box-sizing: border-box; }
 
-    body {
+    html, body {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
+      min-height: 100%;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(129, 140, 248, 0.08), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, #0a0f1c 100%);
       color: var(--text);
     }
 
+    body {
+      padding: 24px;
+    }
+
     .wrap {
-      max-width: 1500px;
+      max-width: 1560px;
       margin: 0 auto;
-      padding: 16px;
     }
 
-    h1 {
-      margin: 0 0 14px 0;
-      font-size: 24px;
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 22px 24px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(18, 24, 40, 0.95), rgba(14, 19, 32, 0.94));
+      box-shadow: var(--shadow);
     }
 
-    .sub {
+    .hero-left h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-left p {
+      margin: 10px 0 0;
       color: var(--muted);
-      margin-bottom: 14px;
       font-size: 14px;
+      max-width: 860px;
+      line-height: 1.5;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--chip-border);
+      background: var(--chip);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted-2);
+    }
+
+    .dot.ok { background: var(--ok); }
+    .dot.bad { background: var(--bad); }
+
+    .hero-right {
+      min-width: 230px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .hero-stat {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+    }
+
+    .hero-stat .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .hero-stat .value {
+      font-size: 18px;
+      font-weight: 800;
+      word-break: break-word;
     }
 
     .status-strip {
       display: grid;
       grid-template-columns: repeat(4, minmax(180px, 1fr));
-      gap: 10px;
-      margin-bottom: 16px;
+      gap: 14px;
+      margin-bottom: 18px;
     }
 
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
     }
 
     .metric-label {
       color: var(--muted);
       font-size: 12px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .metric-value {
-      font-size: 20px;
-      font-weight: 700;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
       word-break: break-word;
+    }
+
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+
+    .panel-section {
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 12px 0;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    .section-subtle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .overview-media {
+      position: relative;
+      width: 100%;
+      height: 540px;
+      background: linear-gradient(180deg, #0b1020, #0d1324);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .overview-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .overview-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      background:
+        linear-gradient(180deg, rgba(8, 12, 22, 0.55) 0%, rgba(8, 12, 22, 0.08) 28%, rgba(8, 12, 22, 0.08) 72%, rgba(8, 12, 22, 0.62) 100%);
+    }
+
+    .overview-topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .overview-chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .overlay-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.14);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.22);
+    }
+
+    .overlay-chip.emotion {
+      background: rgba(96, 165, 250, 0.16);
+      color: #dbeafe;
+    }
+
+    .overlay-chip.gesture {
+      background: rgba(129, 140, 248, 0.18);
+      color: #e0e7ff;
+    }
+
+    .overlay-chip.system {
+      background: rgba(15, 23, 42, 0.45);
+      color: var(--text);
+    }
+
+    .overview-bottomline {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .overview-callout {
+      max-width: 760px;
+    }
+
+    .overview-callout-title {
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+
+    .overview-callout-sub {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 720px;
+    }
+
+    .overview-quickstats {
+      display: grid;
+      gap: 10px;
+    }
+
+    .overview-quickstat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(10, 14, 24, 0.56);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      font-size: 13px;
+    }
+
+    .overview-quickstat span {
+      color: var(--muted);
+    }
+
+    .overview-quickstat strong {
+      color: var(--text);
+    }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .overview-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .overview-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    .overview-main {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+
+    .overview-sub {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      min-height: 38px;
+      margin-bottom: 14px;
+    }
+
+    .overview-stats {
+      display: grid;
+      gap: 10px;
+    }
+
+    .overview-stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: var(--panel-3);
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .overview-stat span {
+      color: var(--muted);
+    }
+
+    .overview-stat strong {
+      color: var(--text);
+      font-size: 13px;
     }
 
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 18px;
       align-items: start;
+      margin-bottom: 18px;
     }
 
-    .image-card h2,
-    .asr-card h2,
-    .emotion-card h2,
-    .gesture-card h2 {
-      margin: 0 0 10px 0;
-      font-size: 18px;
-    }
-
-    .image-box {
+    .image-frame,
+    .gesture-fixed-box {
       width: 100%;
-      background: #0b0d12;
+      height: 360px;
+      background: linear-gradient(180deg, #0b1020, #0d1324);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 16px;
       overflow: hidden;
-      min-height: 280px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    img {
+    .image-frame img,
+    .gesture-fixed-box img {
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: contain;
       display: block;
     }
 
     .details {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 12px;
+      gap: 12px;
+      margin-top: 14px;
     }
 
     .kv {
       background: var(--panel-2);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-      min-height: 60px;
+      border-radius: var(--radius-md);
+      padding: 12px;
+      min-height: 70px;
     }
 
     .kv .k {
       color: var(--muted);
       font-size: 12px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
 
     .kv .v {
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
       word-break: break-word;
+      line-height: 1.35;
     }
 
-    .asr-transcript {
-      min-height: 88px;
-      padding: 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      font-size: 20px;
-      line-height: 1.4;
-      white-space: pre-wrap;
-    }
-
-    .ok { color: var(--ok); }
-    .bad { color: var(--bad); }
-
-    .emotion-grid,
-    .gesture-grid {
+    .signal-layout {
       display: grid;
       grid-template-columns: 1.1fr 0.9fr;
-      gap: 16px;
-      margin-top: 8px;
+      gap: 18px;
+      margin-top: 10px;
     }
 
-    .emotion-category,
-    .gesture-category {
-      font-size: 30px;
-      font-weight: 800;
-      margin-bottom: 6px;
+    .signal-headline {
+      font-size: 34px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
       text-transform: capitalize;
     }
 
-    .emotion-sub,
-    .gesture-sub {
+    .signal-sub {
       color: var(--muted);
       font-size: 13px;
-      margin-bottom: 14px;
+      line-height: 1.5;
+      margin-bottom: 18px;
     }
 
     .bar-wrap {
@@ -176,17 +472,17 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .bar-track {
       position: relative;
       width: 100%;
-      height: 22px;
+      height: 24px;
       border-radius: 999px;
-      background: var(--panel-2);
+      background: var(--panel-3);
       border: 1px solid var(--border);
       overflow: hidden;
     }
@@ -197,8 +493,7 @@
       top: 0;
       bottom: 0;
       width: 2px;
-      background: #c7cedb;
-      opacity: 0.55;
+      background: rgba(255,255,255,0.35);
       transform: translateX(-1px);
       z-index: 2;
     }
@@ -215,9 +510,19 @@
       background: var(--bar-neg);
     }
 
+    #gesturePitchBar,
+    #gestureYawBar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      background: var(--bar-gesture);
+      width: 0%;
+    }
+
     .score-list {
       display: grid;
-      gap: 8px;
+      gap: 10px;
       margin-top: 14px;
     }
 
@@ -226,68 +531,115 @@
       justify-content: space-between;
       gap: 12px;
       font-size: 14px;
-      padding: 8px 10px;
+      padding: 10px 12px;
       background: var(--panel-2);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
+      align-items: center;
+    }
+
+    .score-row span:last-child {
+      font-weight: 700;
     }
 
     .gesture-visual-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 12px;
+      gap: 14px;
+      margin-top: 16px;
     }
 
-    .gesture-visual-grid .image-box {
-      min-height: 220px;
-    }
-
-    .gesture-fixed-box {
-      width: 100%;
-      height: 320px;
-      background: #0b0d12;
+    .asr-transcript {
+      min-height: 110px;
+      padding: 16px;
+      border-radius: 16px;
       border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background: var(--panel-2);
+      font-size: 20px;
+      line-height: 1.5;
+      white-space: pre-wrap;
     }
 
-.gesture-fixed-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
 
-    #gesturePitchBar,
-    #gestureYawBar {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      background: #7aa2ff;
-      width: 0%;
+    @media (max-width: 1200px) {
+      .hero {
+        flex-direction: column;
+      }
+
+      .hero-right {
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+      }
+
+      .overview-bottomline {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 980px) {
+      body {
+        padding: 14px;
+      }
+
       .status-strip,
       .grid,
       .details,
-      .emotion-grid,
-      .gesture-grid,
-      .gesture-visual-grid {
+      .signal-layout,
+      .gesture-visual-grid,
+      .hero-right,
+      .overview-grid {
         grid-template-columns: 1fr;
+      }
+
+      .image-frame,
+      .gesture-fixed-box {
+        height: 280px;
+      }
+
+      .overview-media {
+        height: 380px;
+      }
+
+      .signal-headline,
+      .overview-main,
+      .overview-callout-title {
+        font-size: 28px;
       }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>HRI Perception Live Debug</h1>
-    <div class="sub">Operational preview for live video, emotion recognition, head gesture visualization, gateway health, and ASR output.</div>
+    <div class="hero">
+      <div class="hero-left">
+        <h1>HRI Perception Live Debug</h1>
+        <p>
+          Live operational dashboard for multimodal human-robot interaction experiments.
+          Monitor speech, emotion, head gesture activity, processed video, and transport health
+          in one unified interface.
+        </p>
+        <div class="hero-badges">
+          <div class="badge"><span class="dot ok"></span><span>Live streaming</span></div>
+          <div class="badge"><span class="dot"></span><span>Emotion + Gesture + ASR</span></div>
+          <div class="badge"><span class="dot"></span><span>Single-screen overview</span></div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="hero-stat">
+          <div class="label">Gateway</div>
+          <div class="value" id="gatewayConnectedHero">Loading...</div>
+        </div>
+        <div class="hero-stat">
+          <div class="label">Server latency</div>
+          <div class="value" id="serverLatency">Loading...</div>
+        </div>
+      </div>
+    </div>
 
     <div class="status-strip">
       <div class="card">
@@ -308,29 +660,133 @@
       </div>
     </div>
 
+    <div class="card panel-section">
+      <div class="section-title">
+        <h2>Overview</h2>
+        <div class="section-subtle">Processed video plus unified live summary of speech, emotion, and head gesture</div>
+      </div>
+
+      <div class="overview-media">
+        <img id="overviewProcessedFrame" alt="Overview processed video" />
+        <div class="overview-overlay">
+          <div class="overview-topline">
+            <div class="overview-chips">
+              <div class="overlay-chip emotion">
+                <span>Emotion</span>
+                <strong id="overviewOverlayEmotion">Loading...</strong>
+              </div>
+              <div class="overlay-chip gesture">
+                <span>Gesture</span>
+                <strong id="overviewOverlayGesture">Loading...</strong>
+              </div>
+            </div>
+            <div class="overlay-chip system">
+              <span>Latency</span>
+              <strong id="overviewOverlayLatency">-</strong>
+            </div>
+          </div>
+
+          <div class="overview-bottomline">
+            <div class="overview-callout">
+              <div class="overview-callout-title" id="overviewOverlayTitle">Waiting for speech...</div>
+              <div class="overview-callout-sub" id="overviewOverlaySubtitle">
+                Live processed video with current emotion and detected head gesture.
+              </div>
+            </div>
+
+            <div class="overview-quickstats">
+              <div class="overview-quickstat"><span>ASR model</span><strong id="overviewOverlayAsrModel">-</strong></div>
+              <div class="overview-quickstat"><span>Emotion model</span><strong id="overviewOverlayEmotionModel">-</strong></div>
+              <div class="overview-quickstat"><span>Gesture backend</span><strong id="overviewOverlayGestureModel">-</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="overview-card">
+          <div class="overview-label">Speech</div>
+          <div class="overview-main" id="overviewAsrMain">Waiting...</div>
+          <div class="overview-sub" id="overviewAsrSub">No transcript yet</div>
+          <div class="overview-stats">
+            <div class="overview-stat"><span>Model</span><strong id="overviewAsrModel">-</strong></div>
+            <div class="overview-stat"><span>Chunk</span><strong id="overviewAsrChunk">-</strong></div>
+            <div class="overview-stat"><span>Latency</span><strong id="overviewAsrLatency">-</strong></div>
+          </div>
+        </div>
+
+        <div class="overview-card">
+          <div class="overview-label">Emotion</div>
+          <div class="overview-main" id="overviewEmotionMain">Waiting...</div>
+          <div class="overview-sub" id="overviewEmotionSub">No emotion state yet</div>
+          <div class="overview-stats">
+            <div class="overview-stat"><span>Confidence</span><strong id="overviewEmotionConfidence">-</strong></div>
+            <div class="overview-stat"><span>Valence</span><strong id="overviewEmotionValence">-</strong></div>
+            <div class="overview-stat"><span>Arousal</span><strong id="overviewEmotionArousal">-</strong></div>
+          </div>
+        </div>
+
+        <div class="overview-card">
+          <div class="overview-label">Head Gesture</div>
+          <div class="overview-main" id="overviewGestureMain">Waiting...</div>
+          <div class="overview-sub" id="overviewGestureSub">No gesture state yet</div>
+          <div class="overview-stats">
+            <div class="overview-stat"><span>Confidence</span><strong id="overviewGestureConfidence">-</strong></div>
+            <div class="overview-stat"><span>Nod</span><strong id="overviewGestureNod">-</strong></div>
+            <div class="overview-stat"><span>Shake</span><strong id="overviewGestureShake">-</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card panel-section">
+      <div class="section-title">
+        <h2>Utterance</h2>
+        <div class="section-subtle">Streaming speech recognition output</div>
+      </div>
+      <div class="asr-transcript" id="asrTranscript">Waiting for ASR...</div>
+      <div class="details" style="margin-top: 14px;">
+        <div class="kv"><div class="k">ASR model</div><div class="v" id="asrModel">-</div></div>
+        <div class="kv"><div class="k">ASR chunk ID</div><div class="v" id="asrChunkId">-</div></div>
+        <div class="kv"><div class="k">ASR latency</div><div class="v" id="asrLatency">-</div></div>
+        <div class="kv"><div class="k">Audio source</div><div class="v" id="asrSource">-</div></div>
+        <div class="kv"><div class="k">Audio last sample</div><div class="v mono" id="audioLastSampleTs">-</div></div>
+        <div class="kv"><div class="k">ASR warnings</div><div class="v" id="asrWarnings">-</div></div>
+      </div>
+    </div>
+
     <div class="grid">
-      <div class="card image-card">
-        <h2>Latest Input Frame</h2>
-        <div class="image-box">
+      <div class="card">
+        <div class="section-title">
+          <h2>Latest Input Frame</h2>
+          <div class="section-subtle">Incoming live video</div>
+        </div>
+        <div class="image-frame">
           <img id="inputFrame" alt="Latest input frame" />
         </div>
       </div>
 
-      <div class="card image-card">
-        <h2>Latest Annotated Frame</h2>
-        <div class="image-box">
+      <div class="card">
+        <div class="section-title">
+          <h2>Latest Annotated Frame</h2>
+          <div class="section-subtle">Primary visual debug output</div>
+        </div>
+        <div class="image-frame">
           <img id="annotatedFrame" alt="Latest annotated frame" />
         </div>
       </div>
     </div>
 
-    <div class="card emotion-card" style="margin-top: 16px;">
-      <h2>Emotion Recognition</h2>
+    <div class="card panel-section">
+      <div class="section-title">
+        <h2>Emotion Recognition</h2>
+        <div class="section-subtle">Live affect model status</div>
+      </div>
 
-      <div class="emotion-grid">
+      <div class="signal-layout">
         <div>
-          <div class="emotion-category" id="emotionCategory">Loading...</div>
-          <div class="emotion-sub" id="emotionSummary">Waiting for emotion state...</div>
+          <div class="signal-headline" id="emotionCategory">Loading...</div>
+          <div class="signal-sub" id="emotionSummary">Waiting for emotion state...</div>
 
           <div class="bar-wrap">
             <div class="bar-head">
@@ -363,11 +819,11 @@
           <div class="kv"><div class="k">Frame ID</div><div class="v" id="emotionFrameId">-</div></div>
           <div class="kv"><div class="k">Face detected</div><div class="v" id="emotionFaceDetected">-</div></div>
           <div class="kv"><div class="k">Worker queue delay</div><div class="v" id="workerQueueDelay">-</div></div>
-          <div class="kv"><div class="k">Last video sample timestamp</div><div class="v" id="lastSampleTs">-</div></div>
+          <div class="kv"><div class="k">Last video sample</div><div class="v mono" id="lastSampleTs">-</div></div>
         </div>
       </div>
 
-      <div style="margin-top: 14px;">
+      <div style="margin-top: 16px;">
         <div class="metric-label" style="margin-bottom: 10px;">Category scores</div>
         <div class="score-list">
           <div class="score-row"><span>Happy</span><span id="scoreHappy">-</span></div>
@@ -381,13 +837,16 @@
       </div>
     </div>
 
-    <div class="card gesture-card" style="margin-top: 16px;">
-      <h2>Head Gesture</h2>
+    <div class="card panel-section">
+      <div class="section-title">
+        <h2>Head Gesture</h2>
+        <div class="section-subtle">Holistic gesture event detector</div>
+      </div>
 
-      <div class="gesture-grid">
+      <div class="signal-layout">
         <div>
-          <div class="gesture-category" id="gestureCategory">Loading...</div>
-          <div class="gesture-sub" id="gestureSummary">Waiting for gesture state...</div>
+          <div class="signal-headline" id="gestureCategory">Loading...</div>
+          <div class="signal-sub" id="gestureSummary">Waiting for gesture state...</div>
 
           <div class="bar-wrap">
             <div class="bar-head">
@@ -417,14 +876,14 @@
           <div class="kv"><div class="k">Frame ID</div><div class="v" id="gestureFrameId">-</div></div>
           <div class="kv"><div class="k">History size</div><div class="v" id="gestureHistorySize">-</div></div>
           <div class="kv"><div class="k">Backend latency</div><div class="v" id="gestureLatency">-</div></div>
-          <div class="kv"><div class="k">X range</div><div class="v" id="gestureXRange">-</div></div>
-          <div class="kv"><div class="k">Y range</div><div class="v" id="gestureYRange">-</div></div>
-          <div class="kv"><div class="k">X zero crossings</div><div class="v" id="gestureXZero">-</div></div>
-          <div class="kv"><div class="k">Y zero crossings</div><div class="v" id="gestureYZero">-</div></div>
-          <div class="kv"><div class="k">dx</div><div class="v" id="gestureDx">-</div></div>
-          <div class="kv"><div class="k">dy</div><div class="v" id="gestureDy">-</div></div>
+          <div class="kv"><div class="k">dx</div><div class="v mono" id="gestureDx">-</div></div>
+          <div class="kv"><div class="k">dy</div><div class="v mono" id="gestureDy">-</div></div>
           <div class="kv"><div class="k">Nod state</div><div class="v" id="gestureNodState">-</div></div>
           <div class="kv"><div class="k">Shake state</div><div class="v" id="gestureShakeState">-</div></div>
+          <div class="kv"><div class="k">X range</div><div class="v mono" id="gestureXRange">-</div></div>
+          <div class="kv"><div class="k">Y range</div><div class="v mono" id="gestureYRange">-</div></div>
+          <div class="kv"><div class="k">X zero crossings</div><div class="v" id="gestureXZero">-</div></div>
+          <div class="kv"><div class="k">Y zero crossings</div><div class="v" id="gestureYZero">-</div></div>
         </div>
       </div>
 
@@ -442,18 +901,6 @@
           </div>
         </div>
       </div>
-
-    <div class="card asr-card" style="margin-top: 16px;">
-      <h2>Utterance</h2>
-      <div class="asr-transcript" id="asrTranscript">Waiting for ASR...</div>
-      <div class="details" style="margin-top: 12px;">
-        <div class="kv"><div class="k">ASR model</div><div class="v" id="asrModel">-</div></div>
-        <div class="kv"><div class="k">ASR chunk ID</div><div class="v" id="asrChunkId">-</div></div>
-        <div class="kv"><div class="k">ASR latency</div><div class="v" id="asrLatency">-</div></div>
-        <div class="kv"><div class="k">Audio last sample timestamp</div><div class="v" id="audioLastSampleTs">-</div></div>
-        <div class="kv"><div class="k">Audio source</div><div class="v" id="asrSource">-</div></div>
-        <div class="kv"><div class="k">ASR warnings</div><div class="v" id="asrWarnings">-</div></div>
-      </div>
     </div>
   </div>
 
@@ -462,6 +909,7 @@
     const annotatedFrame = document.getElementById("annotatedFrame");
     const gestureOverlayFrame = document.getElementById("gestureOverlayFrame");
     const gestureInputReference = document.getElementById("gestureInputReference");
+    const overviewProcessedFrame = document.getElementById("overviewProcessedFrame");
 
     function text(id, value) {
       const el = document.getElementById(id);
@@ -490,9 +938,16 @@
     }
 
     function setGatewayStatus(connected) {
+      const label = connected ? "Connected" : "Disconnected";
+      const cls = connected ? "ok" : "bad";
+
       const el = document.getElementById("gatewayConnected");
-      el.textContent = connected ? "Connected" : "Disconnected";
-      el.className = `metric-value ${connected ? "ok" : "bad"}`;
+      el.textContent = label;
+      el.className = `metric-value ${cls}`;
+
+      const elHero = document.getElementById("gatewayConnectedHero");
+      elHero.textContent = label;
+      elHero.className = `value ${cls}`;
     }
 
     function setCenteredBar(barId, rawValue) {
@@ -544,6 +999,7 @@
       const cacheBust = Date.now();
       inputFrame.src = `/debug/image/input?t=${cacheBust}`;
       annotatedFrame.src = `/debug/image/annotated?t=${cacheBust}`;
+      overviewProcessedFrame.src = `/debug/image/annotated?t=${cacheBust}`;
       gestureOverlayFrame.src = `/debug/image/gesture?t=${cacheBust}`;
       gestureInputReference.src = `/debug/image/input?t=${cacheBust}`;
 
@@ -580,6 +1036,15 @@
         text("mediaCounts", `${frameCount} / ${audioCount}`);
         text("lastSampleTs", gateway.video?.last_sample_timestamp_utc ?? "-");
         text("audioLastSampleTs", gateway.audio?.last_sample_timestamp_utc ?? "-");
+
+        let overlayEmotion = "Waiting...";
+        let overlayGesture = "Waiting...";
+        let overlayLatency = "-";
+        let overlayTitle = "Waiting for speech...";
+        let overlaySubtitle = "Live processed video with current emotion and detected head gesture.";
+        let overlayAsrModel = "-";
+        let overlayEmotionModel = "-";
+        let overlayGestureModel = "-";
 
         if (emotionState) {
           const prediction = emotionState.prediction || {};
@@ -619,6 +1084,18 @@
           text("scoreSurprise", fmtPct(scores.surprise));
 
           text("workerQueueDelay", fmtMs(emotionMetrics?.worker_queue_delay_ms));
+
+          text("overviewEmotionMain", prediction.dominant_label ?? "No prediction");
+          text(
+            "overviewEmotionSub",
+            hasVA ? `Quadrant: ${prediction.quadrant ?? "-"}` : "Categorical emotion output"
+          );
+          text("overviewEmotionConfidence", fmtPct(prediction.confidence));
+          text("overviewEmotionValence", hasVA ? fmtSigned(prediction.valence) : "-");
+          text("overviewEmotionArousal", hasVA ? fmtSigned(prediction.arousal) : "-");
+
+          overlayEmotion = prediction.dominant_label ?? "Unknown";
+          overlayEmotionModel = emotionState.active_model ?? "-";
         } else {
           text("emotionTopCategory", "No state");
           text("emotionCategory", "No state");
@@ -634,7 +1111,6 @@
           text("emotionLatency", "-");
           text("emotionFrameId", "-");
           text("emotionFaceDetected", "-");
-
           text("scoreHappy", "-");
           text("scoreNeutral", "-");
           text("scoreSad", "-");
@@ -642,8 +1118,13 @@
           text("scoreFear", "-");
           text("scoreDisgust", "-");
           text("scoreSurprise", "-");
-
           text("workerQueueDelay", "-");
+
+          text("overviewEmotionMain", "Waiting...");
+          text("overviewEmotionSub", "No emotion state yet");
+          text("overviewEmotionConfidence", "-");
+          text("overviewEmotionValence", "-");
+          text("overviewEmotionArousal", "-");
         }
 
         if (gestureState) {
@@ -659,8 +1140,8 @@
           text(
             "gestureSummary",
             gestureState.face_detected
-              ? "Latest temporal gesture estimate from live face crop"
-              : "No usable face/landmarks for gesture analysis"
+              ? "Latest temporal head-gesture estimate from live holistic landmarks"
+              : "No usable landmarks for gesture analysis"
           );
 
           text("gesturePitchScore", fmtFloat(motion.pitch_score));
@@ -682,6 +1163,20 @@
           text("gestureDy", motion.dy ?? "-");
           text("gestureNodState", motion.nod_state ?? "-");
           text("gestureShakeState", motion.shake_state ?? "-");
+
+          text("overviewGestureMain", displayGesture);
+          text(
+            "overviewGestureSub",
+            gestureState.face_detected
+              ? `Instant: ${prediction.instant_gesture ?? "none"}`
+              : "No usable landmarks"
+          );
+          text("overviewGestureConfidence", fmtFloat(prediction.confidence));
+          text("overviewGestureNod", motion.nod_state ?? "-");
+          text("overviewGestureShake", motion.shake_state ?? "-");
+
+          overlayGesture = displayGesture;
+          overlayGestureModel = gestureState.active_model ?? "-";
         } else {
           text("gestureTopCategory", "No state");
           text("gestureCategory", "No state");
@@ -705,11 +1200,19 @@
           text("gestureDy", "-");
           text("gestureNodState", "-");
           text("gestureShakeState", "-");
+
+          text("overviewGestureMain", "Waiting...");
+          text("overviewGestureSub", "No gesture state yet");
+          text("overviewGestureConfidence", "-");
+          text("overviewGestureNod", "-");
+          text("overviewGestureShake", "-");
         }
 
         if (gestureMetrics) {
+          overlayLatency = fmtMs(gestureMetrics.server_pipeline_latency_ms);
           text("serverLatency", fmtMs(gestureMetrics.server_pipeline_latency_ms));
         } else if (emotionMetrics) {
+          overlayLatency = fmtMs(emotionMetrics.server_pipeline_latency_ms);
           text("serverLatency", fmtMs(emotionMetrics.server_pipeline_latency_ms));
         } else {
           text("serverLatency", "-");
@@ -720,9 +1223,7 @@
           const transcript = backend?.transcript;
 
           document.getElementById("asrTranscript").textContent =
-            transcript && transcript.trim().length > 0
-              ? transcript
-              : "No transcript yet";
+            transcript && transcript.trim().length > 0 ? transcript : "No transcript yet";
 
           text("asrModel", asrState.active_model ?? "-");
           text("asrChunkId", asrState.chunk_id ?? "-");
@@ -731,6 +1232,18 @@
 
           const warnings = backend?.warnings;
           text("asrWarnings", Array.isArray(warnings) && warnings.length ? warnings.join(" | ") : "-");
+
+          const overviewTranscript =
+            transcript && transcript.trim().length > 0 ? transcript.trim() : "No speech";
+
+          text("overviewAsrMain", overviewTranscript);
+          text("overviewAsrSub", backend?.transcript ? "Latest recognized utterance" : "Waiting for speech");
+          text("overviewAsrModel", asrState.active_model ?? "-");
+          text("overviewAsrChunk", asrState.chunk_id ?? "-");
+          text("overviewAsrLatency", fmtMs(asrMetrics?.backend_inference_latency_ms));
+
+          overlayAsrModel = asrState.active_model ?? "-";
+          overlayTitle = overviewTranscript;
         } else {
           document.getElementById("asrTranscript").textContent = "Waiting for ASR...";
           text("asrModel", "-");
@@ -738,7 +1251,27 @@
           text("asrLatency", "-");
           text("asrSource", "-");
           text("asrWarnings", "-");
+
+          text("overviewAsrMain", "Waiting...");
+          text("overviewAsrSub", "No transcript yet");
+          text("overviewAsrModel", "-");
+          text("overviewAsrChunk", "-");
+          text("overviewAsrLatency", "-");
+
+          overlayTitle = "Waiting for speech...";
         }
+
+        overlaySubtitle = `Emotion: ${overlayEmotion} | Gesture: ${overlayGesture}`;
+
+        text("overviewOverlayEmotion", overlayEmotion);
+        text("overviewOverlayGesture", overlayGesture);
+        text("overviewOverlayLatency", overlayLatency);
+        text("overviewOverlayTitle", overlayTitle);
+        text("overviewOverlaySubtitle", overlaySubtitle);
+        text("overviewOverlayAsrModel", overlayAsrModel);
+        text("overviewOverlayEmotionModel", overlayEmotionModel);
+        text("overviewOverlayGestureModel", overlayGestureModel);
+
       } catch (err) {
         setGatewayStatus(false);
         text("emotionTopCategory", "Fetch error");
@@ -747,13 +1280,21 @@
         text("gestureTopCategory", "Fetch error");
         text("gestureCategory", "Fetch error");
         text("gestureSummary", "Fetch error");
+        text("gatewayConnectedHero", "Disconnected");
+        text("overviewAsrMain", "Fetch error");
+        text("overviewEmotionMain", "Fetch error");
+        text("overviewGestureMain", "Fetch error");
+        text("overviewOverlayEmotion", "Fetch error");
+        text("overviewOverlayGesture", "Fetch error");
+        text("overviewOverlayTitle", "Fetch error");
+        text("overviewOverlaySubtitle", "Unable to load live multimodal state");
         document.getElementById("asrTranscript").textContent = "Fetch error";
         console.error(err);
       }
     }
 
     refreshData();
-    setInterval(refreshData, 200);
+    setInterval(refreshData, 250);
   </script>
 </body>
 </html>
