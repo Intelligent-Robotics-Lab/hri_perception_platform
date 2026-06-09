@@ -732,8 +732,8 @@
           <div class="overview-sub" id="overviewGestureSub">No gesture state yet</div>
           <div class="overview-stats">
             <div class="overview-stat"><span>Confidence</span><strong id="overviewGestureConfidence">-</strong></div>
-            <div class="overview-stat"><span>Nod</span><strong id="overviewGestureNod">-</strong></div>
-            <div class="overview-stat"><span>Shake</span><strong id="overviewGestureShake">-</strong></div>
+            <div class="overview-stat"><span>One hand up</span><strong id="overviewOneHandUp">-</strong></div>
+            <div class="overview-stat"><span>Nod / Shake</span><strong id="overviewGestureStates">-</strong></div>
           </div>
         </div>
       </div>
@@ -874,16 +874,16 @@
           <div class="kv"><div class="k">Confidence</div><div class="v" id="gestureConfidence">-</div></div>
           <div class="kv"><div class="k">Face detected</div><div class="v" id="gestureFaceDetected">-</div></div>
           <div class="kv"><div class="k">Frame ID</div><div class="v" id="gestureFrameId">-</div></div>
-          <div class="kv"><div class="k">History size</div><div class="v" id="gestureHistorySize">-</div></div>
+          <div class="kv"><div class="k">One-hand counter</div><div class="v" id="gestureOneHandCounter">-</div></div>
           <div class="kv"><div class="k">Backend latency</div><div class="v" id="gestureLatency">-</div></div>
           <div class="kv"><div class="k">dx</div><div class="v mono" id="gestureDx">-</div></div>
           <div class="kv"><div class="k">dy</div><div class="v mono" id="gestureDy">-</div></div>
           <div class="kv"><div class="k">Nod state</div><div class="v" id="gestureNodState">-</div></div>
           <div class="kv"><div class="k">Shake state</div><div class="v" id="gestureShakeState">-</div></div>
-          <div class="kv"><div class="k">X range</div><div class="v mono" id="gestureXRange">-</div></div>
-          <div class="kv"><div class="k">Y range</div><div class="v mono" id="gestureYRange">-</div></div>
-          <div class="kv"><div class="k">X zero crossings</div><div class="v" id="gestureXZero">-</div></div>
-          <div class="kv"><div class="k">Y zero crossings</div><div class="v" id="gestureYZero">-</div></div>
+          <div class="kv"><div class="k">Left hand up</div><div class="v" id="gestureLeftHandUp">-</div></div>
+          <div class="kv"><div class="k">Right hand up</div><div class="v" id="gestureRightHandUp">-</div></div>
+          <div class="kv"><div class="k">One hand up</div><div class="v" id="gestureOneHandUp">-</div></div>
+          <div class="kv"><div class="k">Last action</div><div class="v" id="gestureLastAction">-</div></div>
         </div>
       </div>
 
@@ -1140,29 +1140,29 @@
           text(
             "gestureSummary",
             gestureState.face_detected
-              ? "Latest temporal head-gesture estimate from live holistic landmarks"
+              ? "Live head and hand gesture estimate from holistic landmarks"
               : "No usable landmarks for gesture analysis"
           );
 
-          text("gesturePitchScore", fmtFloat(motion.pitch_score));
-          text("gestureYawScore", fmtFloat(motion.yaw_score));
-          setUnitBar("gesturePitchBar", motion.pitch_score);
-          setUnitBar("gestureYawBar", motion.yaw_score);
+          text("gesturePitchScore", "-");
+          text("gestureYawScore", "-");
+          setUnitBar("gesturePitchBar", null);
+          setUnitBar("gestureYawBar", null);
 
           text("gestureModel", gestureState.active_model ?? "-");
           text("gestureConfidence", fmtFloat(prediction.confidence));
           text("gestureFaceDetected", gestureState.face_detected ? "Yes" : "No");
           text("gestureFrameId", gestureState.frame_id ?? "-");
-          text("gestureHistorySize", meta.history_size ?? "-");
+          text("gestureOneHandCounter", motion.one_hand_up_counter ?? "-");
           text("gestureLatency", fmtMs(gestureMetrics?.backend_inference_latency_ms));
-          text("gestureXRange", fmtFloat(motion.x_range));
-          text("gestureYRange", fmtFloat(motion.y_range));
-          text("gestureXZero", motion.x_zero_crossings ?? "-");
-          text("gestureYZero", motion.y_zero_crossings ?? "-");
           text("gestureDx", motion.dx ?? "-");
           text("gestureDy", motion.dy ?? "-");
           text("gestureNodState", motion.nod_state ?? "-");
           text("gestureShakeState", motion.shake_state ?? "-");
+          text("gestureLeftHandUp", meta.left_hand_up === null || meta.left_hand_up === undefined ? "-" : (meta.left_hand_up ? "Yes" : "No"));
+          text("gestureRightHandUp", meta.right_hand_up === null || meta.right_hand_up === undefined ? "-" : (meta.right_hand_up ? "Yes" : "No"));
+          text("gestureOneHandUp", meta.one_hand_up === null || meta.one_hand_up === undefined ? "-" : (meta.one_hand_up ? "Yes" : "No"));
+          text("gestureLastAction", prediction.last_action ?? "-");
 
           text("overviewGestureMain", displayGesture);
           text(
@@ -1172,8 +1172,8 @@
               : "No usable landmarks"
           );
           text("overviewGestureConfidence", fmtFloat(prediction.confidence));
-          text("overviewGestureNod", motion.nod_state ?? "-");
-          text("overviewGestureShake", motion.shake_state ?? "-");
+          text("overviewOneHandUp", meta.one_hand_up === null || meta.one_hand_up === undefined ? "-" : (meta.one_hand_up ? "Yes" : "No"));
+          text("overviewGestureStates", `${motion.nod_state ?? "-"} / ${motion.shake_state ?? "-"}`);
 
           overlayGesture = displayGesture;
           overlayGestureModel = gestureState.active_model ?? "-";
@@ -1190,22 +1190,22 @@
           text("gestureConfidence", "-");
           text("gestureFaceDetected", "-");
           text("gestureFrameId", "-");
-          text("gestureHistorySize", "-");
+          text("gestureOneHandCounter", "-");
           text("gestureLatency", "-");
-          text("gestureXRange", "-");
-          text("gestureYRange", "-");
-          text("gestureXZero", "-");
-          text("gestureYZero", "-");
           text("gestureDx", "-");
           text("gestureDy", "-");
           text("gestureNodState", "-");
           text("gestureShakeState", "-");
+          text("gestureLeftHandUp", "-");
+          text("gestureRightHandUp", "-");
+          text("gestureOneHandUp", "-");
+          text("gestureLastAction", "-");
 
           text("overviewGestureMain", "Waiting...");
           text("overviewGestureSub", "No gesture state yet");
           text("overviewGestureConfidence", "-");
-          text("overviewGestureNod", "-");
-          text("overviewGestureShake", "-");
+          text("overviewOneHandUp", "-");
+          text("overviewGestureStates", "-");
         }
 
         if (gestureMetrics) {

@@ -17,7 +17,7 @@ app = FastAPI(title="gesture_recognition")
 SERVICE_NAME = "gesture_recognition"
 BACKEND_NAME = "gesture_holistic_events"
 MODEL_NAME = "mediapipe_holistic_event_detector"
-MODEL_VERSION = "v2_old_style_port_latched_display"
+MODEL_VERSION = "v3_one_hand_up"
 DEVICE = "cpu"
 
 DEBUG_DIR = Path("/data/debug")
@@ -29,6 +29,8 @@ DISPLAY_HOLD_SEC = 1.25
 NOD_DELTA = 0.010
 SHAKE_DELTA = 0.012
 RESET_EPS = 0.003
+
+ONE_HAND_UP_FRAMES = 2
 
 
 class ImagePayload(BaseModel):
@@ -60,13 +62,20 @@ class GestureEventDetector:
         self.last_display_confidence = 0.0
         self.last_display_time = 0.0
 
+        self.one_hand_up_counter = 0
+
     def in_cooldown(self) -> bool:
         return (time.monotonic() - self.last_detection_time) < ACTION_COOLDOWN_SEC
 
     def in_display_hold(self) -> bool:
         return (time.monotonic() - self.last_display_time) < DISPLAY_HOLD_SEC
 
-    def update(self, nose_x: Optional[float], nose_y: Optional[float]) -> Dict:
+    def update(
+        self,
+        nose_x: Optional[float],
+        nose_y: Optional[float],
+        one_hand_up: bool = False,
+    ) -> Dict:
         now = time.monotonic()
 
         dx = None
@@ -80,8 +89,21 @@ class GestureEventDetector:
         if nose_y is not None and self.prev_nose_y is not None:
             dy = nose_y - self.prev_nose_y
 
+        if one_hand_up:
+            self.one_hand_up_counter += 1
+        else:
+            self.one_hand_up_counter = 0
+
         if not self.in_cooldown():
-            if dy is not None:
+            if self.one_hand_up_counter >= ONE_HAND_UP_FRAMES:
+                instant_gesture = "one_hand_up"
+                instant_confidence = 1.0
+                self.last_detection_time = now
+                self.one_hand_up_counter = 0
+                self.nod_state = None
+                self.shake_state = None
+
+            if instant_gesture == "none" and dy is not None:
                 if dy > NOD_DELTA:
                     self.nod_state = "down"
                 elif dy < -NOD_DELTA and self.nod_state == "down":
@@ -114,7 +136,13 @@ class GestureEventDetector:
             self.nod_state = "cool"
             self.shake_state = "cool"
 
-        if dx is not None and dy is not None and abs(dx) < RESET_EPS and abs(dy) < RESET_EPS and not self.in_cooldown():
+        if (
+            dx is not None
+            and dy is not None
+            and abs(dx) < RESET_EPS
+            and abs(dy) < RESET_EPS
+            and not self.in_cooldown()
+        ):
             if self.nod_state == "cool":
                 self.nod_state = None
             if self.shake_state == "cool":
@@ -152,6 +180,7 @@ class GestureEventDetector:
                 "nose_y": None if nose_y is None else round(float(nose_y), 4),
                 "nod_state": self.nod_state,
                 "shake_state": self.shake_state,
+                "one_hand_up_counter": self.one_hand_up_counter,
                 "cooldown_active": self.in_cooldown(),
                 "display_hold_active": self.in_display_hold(),
             },
@@ -201,13 +230,13 @@ def save_overlay(frame_bgr: np.ndarray, results, response: dict):
     vis = frame_bgr.copy()
 
     if results.face_landmarks:
-        mp_drawing.draw_landmarks(
-            vis,
-            results.face_landmarks,
-            mp_holistic.FACEMESH_CONTOURS,
-            landmark_drawing_spec=None,
-            connection_drawing_spec=mp_drawing.DrawingSpec(thickness=1, circle_radius=1),
-        )
+      mp_drawing.draw_landmarks(
+          vis,
+          results.face_landmarks,
+          mp_holistic.FACEMESH_CONTOURS,
+          landmark_drawing_spec=None,
+          connection_drawing_spec=mp_drawing.DrawingSpec(thickness=1, circle_radius=1),
+      )
     if results.pose_landmarks:
         mp_drawing.draw_landmarks(vis, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
     if results.left_hand_landmarks:
@@ -216,10 +245,11 @@ def save_overlay(frame_bgr: np.ndarray, results, response: dict):
         mp_drawing.draw_landmarks(vis, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
     overlay = vis.copy()
-    cv2.rectangle(overlay, (4, 4), (320, 190), (0, 0, 0), -1)
+    cv2.rectangle(overlay, (4, 4), (360, 230), (0, 0, 0), -1)
     cv2.addWeighted(overlay, 0.45, vis, 0.55, 0, vis)
 
     motion = response.get("motion") or {}
+    meta = response.get("meta") or {}
 
     lines = [
         f"Gesture: {response.get('detected_gesture', 'none')}",
@@ -231,6 +261,9 @@ def save_overlay(frame_bgr: np.ndarray, results, response: dict):
         f"nose_y: {motion.get('nose_y', '-')}",
         f"Nod state: {motion.get('nod_state', '-')}",
         f"Shake state: {motion.get('shake_state', '-')}",
+        f"One-hand counter: {motion.get('one_hand_up_counter', '-')}",
+        f"Left hand up: {meta.get('left_hand_up', '-')}",
+        f"Right hand up: {meta.get('right_hand_up', '-')}",
         f"Cooldown: {motion.get('cooldown_active', False)}",
         f"Hold: {motion.get('display_hold_active', False)}",
         f"Last action: {response.get('last_action', 'none')}",
@@ -266,7 +299,7 @@ def metadata():
         "backend_mode": "real",
         "input_type": "full_frame",
         "output_type": "gesture_event",
-        "supported_gestures": ["nod", "shake_head"],
+        "supported_gestures": ["nod", "shake_head", "one_hand_up"],
         "model_name": MODEL_NAME,
         "model_version": MODEL_VERSION,
         "device": DEVICE,
@@ -285,13 +318,31 @@ def predict(req: GesturePredictRequest):
 
         nose_x = None
         nose_y = None
+        left_hand_up = None
+        right_hand_up = None
+        one_hand_up = False
 
         if results.pose_landmarks:
             nose = results.pose_landmarks.landmark[mp_holistic.PoseLandmark.NOSE]
             nose_x = float(nose.x)
             nose_y = float(nose.y)
 
-        event = detector.update(nose_x=nose_x, nose_y=nose_y)
+            lm = results.pose_landmarks.landmark
+
+            l_sh = lm[mp_holistic.PoseLandmark.LEFT_SHOULDER]
+            r_sh = lm[mp_holistic.PoseLandmark.RIGHT_SHOULDER]
+            l_wr = lm[mp_holistic.PoseLandmark.LEFT_WRIST]
+            r_wr = lm[mp_holistic.PoseLandmark.RIGHT_WRIST]
+
+            left_hand_up = l_wr.y < l_sh.y
+            right_hand_up = r_wr.y < r_sh.y
+            one_hand_up = bool(left_hand_up or right_hand_up)
+
+        event = detector.update(
+            nose_x=nose_x,
+            nose_y=nose_y,
+            one_hand_up=one_hand_up,
+        )
         latency_ms = (time.perf_counter() - started) * 1000.0
 
         response = {
@@ -314,6 +365,9 @@ def predict(req: GesturePredictRequest):
             "meta": {
                 "input_kind": str(req.meta.get("input_kind", "frame")).lower(),
                 "frame_shape": list(frame_bgr.shape),
+                "one_hand_up": one_hand_up,
+                "left_hand_up": left_hand_up,
+                "right_hand_up": right_hand_up,
             },
         }
 
