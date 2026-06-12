@@ -334,8 +334,15 @@ def predict(req: GesturePredictRequest):
             l_wr = lm[mp_holistic.PoseLandmark.LEFT_WRIST]
             r_wr = lm[mp_holistic.PoseLandmark.RIGHT_WRIST]
 
-            left_hand_up = l_wr.y < l_sh.y
-            right_hand_up = r_wr.y < r_sh.y
+            mid_shoulder_y = (float(l_sh.y) + float(r_sh.y)) / 2.0
+            head_scale = abs(mid_shoulder_y - float(nose.y))
+
+            # Approximate "3 inches above head" as a stricter body-relative threshold.
+            # Increase 0.35 to make it stricter, decrease it to make it easier.
+            hand_raise_line_y = float(nose.y) - 0.35 * head_scale
+
+            left_hand_up = float(l_wr.y) < hand_raise_line_y
+            right_hand_up = float(r_wr.y) < hand_raise_line_y
             one_hand_up = bool(left_hand_up or right_hand_up)
 
         event = detector.update(
@@ -368,6 +375,8 @@ def predict(req: GesturePredictRequest):
                 "one_hand_up": one_hand_up,
                 "left_hand_up": left_hand_up,
                 "right_hand_up": right_hand_up,
+                "hand_raise_line_y": round(float(hand_raise_line_y), 4) if results.pose_landmarks else None,
+                "head_scale": round(float(head_scale), 4) if results.pose_landmarks else None,
             },
         }
 
